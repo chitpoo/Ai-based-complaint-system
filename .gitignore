@@ -1,0 +1,43 @@
+# ===== Java / Spring Boot =====
+backend/target/
+*.class
+*.jar
+*.war
+*.log
+.mvn/wrapper/maven-wrapper.jar
+
+# Local config with secrets (DB password, JWT secret, mail credentials)
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-local.yml
+
+# ===== Python / ML =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+ml-service/models/*.pkl
+ml-service/models/*.joblib
+
+# ===== Node / React =====
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+npm-debug.log*
+yarn-error.log*
+
+# ===== Environment / secrets =====
+.env
+.env.*
+!.env.example
+
+# ===== IDE / OS =====
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ===== Uploads =====
+uploads/
