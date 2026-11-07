@@ -124,10 +124,3 @@ ai-grievance-management-system/
 - MySQL 8
 
 ---
-
-## Team
-
-- **Swastik Mishra**
-- **Vinayak Patil**
-
-*Developed as a Societal Based Mini Project (24CSE57), Department of Computer Science and Engineering, New Horizon College of Engineering.*
