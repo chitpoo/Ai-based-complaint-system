@@ -296,10 +296,10 @@ Layer-based, matching the existing `entity/` and `enums/` packages:
 **Build:**
 - `pom.xml`: add `spring-boot-starter-web`, `spring-boot-starter-security`, `spring-boot-starter-mail`, and the JJWT trio (`jjwt-api`, `jjwt-impl`, `jjwt-jackson` — check the current stable version on Maven Central).
 - `application.properties`: every value from an env var with a safe local default — `server.port=${PORT:8080}`, datasource URL/user/password, `spring.jpa.hibernate.ddl-auto=update`, `spring.jpa.open-in-view=false`, `app.jwt.secret`, `app.jwt.expiration-ms`, `app.ml.url`, `app.mail.enabled`, `app.frontend-url`, `app.admin.email`, `app.admin.password`, `spring.profiles.active=${SPRING_PROFILES_ACTIVE:local}`.
-- `application-local.properties` (gitignored): real local DB password, a dev JWT secret.
+- `application-local.properties` (gitignored): real local DB password, a dev JWT secret, a dev admin password (`app.jwt.secret` and `app.admin.password` have no committed default).
 - `backend/.env.example`: every variable from §8 with placeholder values.
 - Add `@EnableScheduling` and `@EnableAsync` on a class in `config/`.
-- Create the local database: `CREATE DATABASE grievance CHARACTER SET utf8mb4;`
+- Create the local database: `CREATE DATABASE Grievance_System CHARACTER SET utf8mb4;`
 
 **Files:** `backend/pom.xml`, `backend/src/main/resources/application*.properties`, `backend/.env.example`, `config/AppConfig.java`
 
@@ -806,6 +806,7 @@ Free tiers change often — re-verify limits at Step 26 before deploying (see So
 | `ML_URL` | `https://<ml-service>` (base URL, no path — the client appends `/predict` and `/health`) | yes |
 | `MAIL_ENABLED` | `true` / `false` (false = log emails to console) | yes |
 | `MAIL_HOST/MAIL_PORT/MAIL_USERNAME/MAIL_PASSWORD/MAIL_FROM` | any free SMTP provider | if `MAIL_ENABLED=true` |
+| `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | `true` for real SMTP providers (default `false` for a local mail catcher) | if `MAIL_ENABLED=true` |
 | `FRONTEND_URL` | `https://<vercel-app>.vercel.app` | yes (CORS) |
 | `ADMIN_EMAIL/ADMIN_PASSWORD` | seed admin | yes (first boot) |
 
