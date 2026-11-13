@@ -2,7 +2,7 @@
 
 A full-stack web application that lets users submit grievances online and uses NLP to automatically **categorise** each complaint, **predict its priority**, and **route** it to the right department. Every grievance is tracked until it is resolved, and delayed cases are escalated automatically.
 
-> 🚧 **Status: In active development.** Core features are being built; see the [Roadmap](#roadmap) for progress.
+> 🚧 **Status: In active development.** Database entities are in place; the API, ML service and frontend are being built step by step. See the [Roadmap](#roadmap) for progress and [`plan.md`](plan.md) for the full specification (schema, API contract, build steps).
 
 ---
 
@@ -24,7 +24,7 @@ In many colleges, organisations and public offices, grievances are still collect
 - 🔀 **Automatic routing** to the concerned department or officer
 - ⏱️ **Time-based escalation** of unresolved grievances
 - 📧 **Email notifications** on every status change
-- 📊 **Admin analytics** on category-wise, department-wise and resolution-time trends
+- 📊 **Admin dashboard** with counts by category, status and priority, average resolution time and overdue cases
 
 ---
 
@@ -47,15 +47,56 @@ Submitted → Assigned → In Progress → Resolved → Closed
                 ↘ (time limit exceeded) → Escalated
 ```
 
+Every status change is validated against a fixed transition table and written to an append-only audit trail.
+
+---
+
+## How It Works
+
+1. A user logs in and submits a grievance (title + description) and receives a tracking ID such as `GRV-2026-483920`.
+2. The backend sends the text to the ML service, which returns a **category**, a **priority** and confidence scores.
+3. The grievance is routed to the department that owns that category and marked *Assigned*.
+4. Officers of that department see it in their queue and move it through *In Progress* → *Resolved*; an admin closes it.
+5. A scheduled job checks each department's SLA (72 hours by default). Anything still open past it is marked *Escalated* and the admin is notified.
+6. The complainant gets an email on every status change and can check progress at any time with the tracking ID — no login needed.
+
+### AI module
+
+| Part | Approach |
+|---|---|
+| Features | TF-IDF over title + description (unigrams and bigrams) |
+| Models | Two Logistic Regression classifiers: category (5 classes) and priority (3 levels) |
+| Safety rules | Critical keywords (*ragging, harassment, threat, unsafe…*) force **High** priority regardless of the model |
+| Evaluation | Train/test split grouped by source complaint so paraphrases never leak across the split; accuracy, per-class precision/recall and confusion matrices are reported |
+
+### Design decisions
+
+- **Submission never depends on the AI.** If the ML service is slow or down, the grievance is still saved as *Unclassified* and sent to the admin for manual routing.
+- **Role-based access is enforced on the server** (JWT + Spring Security), not just hidden in the UI. Officers only see grievances of their own department.
+- **Public tracking shows limited fields only** — status and timeline, never emails, descriptions or internal remarks.
+- **Officer accounts are created by an admin**; public registration always creates a normal user.
+
+### API overview
+
+| Area | Endpoints |
+|---|---|
+| Auth | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/users/me` |
+| Grievances | `POST /api/grievances`, `GET /api/grievances/my`, `GET /api/grievances/track/{trackingId}`, `GET /api/grievances/{id}` |
+| Officer | `GET /api/grievances/assigned`, `PUT /api/grievances/{id}/status` |
+| Admin | `GET /api/grievances`, `PUT /api/grievances/{id}/assign`, `GET /api/admin/stats`, `POST /api/admin/officers`, department management |
+| ML service | `POST /predict` (internal, called by the backend only) |
+
+Request and response shapes are in [`plan.md` §3](plan.md).
+
 ---
 
 ## Tech Stack
 
 | Layer | Technologies |
 |---|---|
-| **Frontend** | React.js, HTML, CSS, Bootstrap |
+| **Frontend** | React.js (Vite), HTML, CSS, Bootstrap |
 | **Backend** | Java 17, Spring Boot 3.x, Spring Web, Spring Data JPA / Hibernate, Spring Security, JWT |
-| **AI / ML** | Python 3.10+, scikit-learn (TF-IDF + Logistic Regression / Naive Bayes), pandas, FastAPI |
+| **AI / ML** | Python 3.10+, scikit-learn (TF-IDF + Logistic Regression), pandas, FastAPI |
 | **Database** | MySQL 8 |
 | **Other** | JavaMail, Spring Scheduler, Maven, Postman, Git |
 
@@ -65,9 +106,9 @@ Submitted → Assigned → In Progress → Resolved → Closed
 
 | Role | Capabilities |
 |---|---|
-| **User** | Register, log in, submit grievances, track status, give feedback |
-| **Officer** | View assigned grievances, update status, resolve |
-| **Admin** | Manage departments and officers, reassign, view analytics dashboard |
+| **User** | Register, log in, submit grievances, track status (feedback after resolution is planned) |
+| **Officer** | View their department's grievances, update status, resolve |
+| **Admin** | Manage departments, create officer accounts, reassign grievances, close resolved cases, view analytics dashboard |
 
 ---
 
@@ -78,7 +119,8 @@ ai-grievance-management-system/
 ├── backend/        # Spring Boot REST API
 ├── ml-service/     # Python NLP classification service
 ├── frontend/       # React application
-└── docs/           # Diagrams, schema, reports
+├── docs/           # Schema, Postman collection, diagrams, reports
+└── plan.md         # Full specification and step-by-step build guide
 ```
 
 ---
@@ -86,6 +128,7 @@ ai-grievance-management-system/
 ## Roadmap
 
 **Core**
+- [x] Database schema and JPA entities
 - [ ] User registration and login (JWT, role-based access)
 - [ ] Grievance submission with unique tracking ID
 - [ ] Grievance status tracking
@@ -105,10 +148,13 @@ ai-grievance-management-system/
 
 **Dashboard and extras**
 - [ ] Admin analytics dashboard
+- [ ] Deployment
+
+**Planned after the first release**
+- [ ] Feedback and rating after resolution
 - [ ] File attachments
 - [ ] Anonymous submission
-- [ ] Feedback and rating after resolution
-- [ ] Deployment
+- [ ] Trend charts and exports
 
 ---
 
