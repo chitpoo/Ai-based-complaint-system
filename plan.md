@@ -722,8 +722,8 @@ Tick a step only after its Verify list passes and the review is addressed.
 - [x] Entities `User`, `Department`, `Grievance`, `StatusHistory` + enums
 
 **Phase A — Backend foundation**
-- [ ] 1. Dependencies and configuration
-- [ ] 2. Repositories and seed data
+- [x] 1. Dependencies and configuration
+- [x] 2. Repositories and seed data
 - [ ] 3. Error handling
 - [ ] 4. JWT and security configuration
 - [ ] 5. Auth endpoints
