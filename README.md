@@ -129,10 +129,10 @@ ai-grievance-management-system/
 
 **Core**
 - [x] Database schema and JPA entities
-- [ ] User registration and login (JWT, role-based access)
-- [ ] Grievance submission with unique tracking ID
-- [ ] Grievance status tracking
-- [ ] Officer assignment and status updates
+- [x] User registration and login (JWT, role-based access)
+- [x] Grievance submission with unique tracking ID
+- [x] Grievance status tracking
+- [x] Officer assignment and status updates
 
 **AI module**
 - [ ] Labelled grievance dataset
@@ -142,12 +142,12 @@ ai-grievance-management-system/
 - [ ] Accuracy evaluation report
 
 **Automation**
-- [ ] Automatic routing to departments
-- [ ] Scheduled escalation of delayed grievances
-- [ ] Email notifications on status change
+- [x] Automatic routing to departments
+- [x] Scheduled escalation of delayed grievances
+- [x] Email notifications on status change
 
 **Dashboard and extras**
-- [ ] Admin analytics dashboard
+- [x] Admin analytics dashboard
 - [ ] Deployment
 
 **Planned after the first release**
@@ -160,13 +160,54 @@ ai-grievance-management-system/
 
 ## Getting Started
 
-> Setup instructions will be added as each module is completed.
-
 ### Prerequisites
 - Java JDK 17+
 - Maven
-- Python 3.10+
+- Python 3.10+ (ML service, not built yet)
 - Node.js 18+
 - MySQL 8
+
+### 1. Database
+
+```sql
+CREATE DATABASE Grievance_System CHARACTER SET utf8mb4;
+```
+
+### 2. Backend
+
+Create `backend/src/main/resources/application-local.properties` (gitignored) with your local values:
+
+```properties
+spring.datasource.password=<your MySQL password>
+app.jwt.secret=<any random string of 32+ characters>
+app.admin.password=<password for the first admin account>
+```
+
+Then:
+
+```bash
+cd backend
+mvn clean package
+java -jar target/grievance-management-0.0.1-SNAPSHOT.jar
+```
+
+The API runs on `http://localhost:8080/api`. On first start it creates the tables, the five departments and an admin account (`admin@example.com` with the password you set). All settings are listed in `backend/.env.example`.
+
+Until the ML service exists, every grievance is saved as *Unclassified* and waits for the admin to route it. That is the designed fallback, not an error.
+
+### 3. Frontend
+
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. Log in as the admin to create officer accounts; register normally to submit grievances.
+
+### API tests
+
+Import `docs/postman-collection.json` into Postman, set the `adminPassword` collection variable, and run the folders top to bottom.
 
 ---

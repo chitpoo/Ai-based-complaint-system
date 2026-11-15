@@ -2,6 +2,7 @@ package com.grievance.repository;
 
 import com.grievance.entity.User;
 import com.grievance.enums.Role;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -13,5 +14,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
+    @EntityGraph(attributePaths = "department")
     List<User> findByRole(Role role);
 }

@@ -724,9 +724,9 @@ Tick a step only after its Verify list passes and the review is addressed.
 **Phase A — Backend foundation**
 - [x] 1. Dependencies and configuration
 - [x] 2. Repositories and seed data
-- [ ] 3. Error handling
-- [ ] 4. JWT and security configuration
-- [ ] 5. Auth endpoints
+- [x] 3. Error handling
+- [x] 4. JWT and security configuration
+- [x] 5. Auth endpoints
 
 **Phase B — ML service**
 - [ ] 6. Dataset
@@ -735,26 +735,26 @@ Tick a step only after its Verify list passes and the review is addressed.
 - [ ] 9. Prediction API
 
 **Phase C — Backend core flow**
-- [ ] 10. ML client
-- [ ] 11. Tracking-ID generator
-- [ ] 12. Submit grievance
-- [ ] 13. Read endpoints
+- [x] 10. ML client
+- [x] 11. Tracking-ID generator
+- [x] 12. Submit grievance
+- [x] 13. Read endpoints
 
 **Phase D — Workflow, automation, dashboard**
-- [ ] 14. Status updates
-- [ ] 15. Admin: assign, officers, departments
-- [ ] 16. Email notifications
-- [ ] 17. Escalation scheduler
-- [ ] 18. Admin list and stats
-- [ ] 19. Postman collection
+- [x] 14. Status updates
+- [x] 15. Admin: assign, officers, departments
+- [x] 16. Email notifications
+- [x] 17. Escalation scheduler
+- [x] 18. Admin list and stats
+- [x] 19. Postman collection
 
 **Phase E — Frontend**
-- [ ] 20. Scaffold, API client, auth context
-- [ ] 21. Login and register
-- [ ] 22. Submit grievance
-- [ ] 23. My grievances, detail, public tracking
-- [ ] 24. Officer queue
-- [ ] 25. Admin dashboard
+- [x] 20. Scaffold, API client, auth context
+- [x] 21. Login and register
+- [x] 22. Submit grievance
+- [x] 23. My grievances, detail, public tracking
+- [x] 24. Officer queue
+- [x] 25. Admin dashboard
 
 **Phase F — Deploy and document**
 - [ ] 26. Deploy database, ML service, backend
@@ -809,6 +809,7 @@ Free tiers change often — re-verify limits at Step 26 before deploying (see So
 | `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | `true` for real SMTP providers (default `false` for a local mail catcher) | if `MAIL_ENABLED=true` |
 | `FRONTEND_URL` | `https://<vercel-app>.vercel.app` | yes (CORS) |
 | `ADMIN_EMAIL/ADMIN_PASSWORD` | seed admin | yes (first boot) |
+| `ESCALATION_INTERVAL_MS` | how often the escalation job runs (default `900000` = 15 min) | no |
 
 **ML service:** `PORT`, `MODEL_DIR` (default `./models`), `LOG_LEVEL`. No secrets. It is only ever called server-to-server, so no CORS config is needed.
 

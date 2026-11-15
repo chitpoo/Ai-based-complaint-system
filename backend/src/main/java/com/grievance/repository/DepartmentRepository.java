@@ -9,4 +9,8 @@ import java.util.Optional;
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
     Optional<Department> findByCategory(Category category);
+
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByCategory(Category category);
 }
