@@ -1,0 +1,8 @@
+target/
+.idea/
+*.iml
+.env
+.env.*
+# Local secrets file: must never be copied into an image layer.
+src/main/resources/application-local.properties
+src/main/resources/application-local.yml

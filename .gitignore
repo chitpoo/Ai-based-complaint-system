@@ -19,6 +19,8 @@ env/
 .ipynb_checkpoints/
 ml-service/models/*.pkl
 ml-service/models/*.joblib
+# Written by train.py next to the models; rebuilt from the committed CSV on every run.
+ml-service/models/test_split.csv
 
 # ===== Node / React =====
 frontend/node_modules/

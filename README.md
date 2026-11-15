@@ -2,7 +2,7 @@
 
 A full-stack web application that lets users submit grievances online and uses NLP to automatically **categorise** each complaint, **predict its priority**, and **route** it to the right department. Every grievance is tracked until it is resolved, and delayed cases are escalated automatically.
 
-> 🚧 **Status: In active development.** Database entities are in place; the API, ML service and frontend are being built step by step. See the [Roadmap](#roadmap) for progress and [`plan.md`](plan.md) for the full specification (schema, API contract, build steps).
+> 🚧 **Status: In active development.** The backend API, the ML service and the frontend run locally end to end; deployment is the remaining step. See the [Roadmap](#roadmap) for progress and [`plan.md`](plan.md) for the full specification (schema, API contract, build steps).
 
 ---
 
@@ -96,7 +96,7 @@ Request and response shapes are in [`plan.md` §3](plan.md).
 |---|---|
 | **Frontend** | React.js (Vite), HTML, CSS, Bootstrap |
 | **Backend** | Java 17, Spring Boot 3.x, Spring Web, Spring Data JPA / Hibernate, Spring Security, JWT |
-| **AI / ML** | Python 3.10+, scikit-learn (TF-IDF + Logistic Regression), pandas, FastAPI |
+| **AI / ML** | Python 3.13, scikit-learn (TF-IDF + Logistic Regression), pandas, FastAPI |
 | **Database** | MySQL 8 |
 | **Other** | JavaMail, Spring Scheduler, Maven, Postman, Git |
 
@@ -135,11 +135,11 @@ ai-grievance-management-system/
 - [x] Officer assignment and status updates
 
 **AI module**
-- [ ] Labelled grievance dataset
-- [ ] Category classification model
-- [ ] Priority prediction + urgency keyword rules
-- [ ] ML prediction API (FastAPI)
-- [ ] Accuracy evaluation report
+- [x] Labelled grievance dataset (drafted with AI assistance; see `ml-service/data/README.md`)
+- [x] Category classification model
+- [x] Priority prediction + urgency keyword rules
+- [x] ML prediction API (FastAPI)
+- [x] Accuracy evaluation report (`ml-service/docs/evaluation.md`)
 
 **Automation**
 - [x] Automatic routing to departments
@@ -163,7 +163,7 @@ ai-grievance-management-system/
 ### Prerequisites
 - Java JDK 17+
 - Maven
-- Python 3.10+ (ML service, not built yet)
+- Python 3.13 (ML service; the pinned packages were installed and tested on 3.13)
 - Node.js 18+
 - MySQL 8
 
@@ -173,7 +173,20 @@ ai-grievance-management-system/
 CREATE DATABASE Grievance_System CHARACTER SET utf8mb4;
 ```
 
-### 2. Backend
+### 2. ML service
+
+```bash
+cd ml-service
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python train.py
+uvicorn app:app --port 8000
+```
+
+`train.py` builds the two models from `data/grievances.csv`; the service will not start without them. Leave it running. Details and results: `ml-service/README.md` and `ml-service/docs/evaluation.md`.
+
+### 3. Backend
 
 Create `backend/src/main/resources/application-local.properties` (gitignored) with your local values:
 
@@ -193,9 +206,11 @@ java -jar target/grievance-management-0.0.1-SNAPSHOT.jar
 
 The API runs on `http://localhost:8080/api`. On first start it creates the tables, the five departments and an admin account (`admin@example.com` with the password you set). All settings are listed in `backend/.env.example`.
 
-Until the ML service exists, every grievance is saved as *Unclassified* and waits for the admin to route it. That is the designed fallback, not an error.
+Timestamps are stored and returned in UTC, and the frontend converts them to the browser's time zone. A local database created before this was introduced holds local-time values that would now read 5.5 hours off in India: drop and recreate it (`DROP DATABASE Grievance_System;` then the `CREATE DATABASE` line above).
 
-### 3. Frontend
+If the ML service is not running or does not answer in time, the grievance is still saved, as *Unclassified*, and waits for the admin to route it. The same happens when the model's category confidence is below a floor (`ML_MIN_CONFIDENCE`, default 0.25) and no critical keyword matched. That is the designed fallback, not an error.
+
+### 4. Frontend
 
 ```bash
 cd frontend

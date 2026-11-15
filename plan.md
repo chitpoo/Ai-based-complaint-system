@@ -210,6 +210,7 @@ Response (`200`):
 - `category` ∈ 5 classes (never UNCLASSIFIED from ML); `priority` ∈ LOW/MEDIUM/HIGH.
 - `keyword_override: true` means a critical keyword forced HIGH (see §4).
 - Backend timeout 5s; on timeout/error → fallback: `category=UNCLASSIFIED`, `priority=MEDIUM`, status stays `SUBMITTED`, lands in the admin queue, still `201` to user.
+- The same fallback applies when `category_confidence` is below `app.ml.min-confidence` (env `ML_MIN_CONFIDENCE`, default `0.25`) and `keyword_override` is false: text the model does not recognise (gibberish, another script) would otherwise be routed on a guess. A prediction with `keyword_override: true` is always kept. A reply with no `category_confidence` is treated as below the floor.
 
 ---
 
@@ -218,6 +219,8 @@ Response (`200`):
 ### Dataset (target ~500 rows: ~100 per category × 5)
 
 Scaled down from 750 because one person is writing it — 500 clean rows beat 750 rushed ones, and the dataset can grow post-MVP.
+
+> **Note on the delivered dataset.** The files in `ml-service/data/` were drafted with AI assistance, not written by hand. The student must read every row, correct wording and labels, and describe the data this way in the report. See `ml-service/data/README.md`.
 
 - File: `ml-service/data/grievances.csv` with columns `group_id, title, description, category, priority`.
 - Each row: realistic 1–3 sentence complaint; every row labelled with **both** category and priority.
@@ -235,14 +238,14 @@ Scaled down from 750 because one person is writing it — 500 clean rows beat 75
 
 ### Metrics to report (`ml-service/docs/evaluation.md` + confusion matrices as images)
 
-- Accuracy (category, priority separately) on the grouped test split **and** on the hand-written sanity set — the sanity-set number is the honest one to quote.
+- Accuracy (category, priority separately) on the grouped test split **and** on the sanity set. The sanity set is a separately written check from the same source as the training data: useful for catching leakage and memorisation, but not a measure of real-world accuracy.
 - Precision / recall / F1 **per class** (`classification_report`).
 - Confusion matrix for category (5×5) and priority (3×3).
 - MVP bar: category accuracy ≥ 0.75, priority accuracy ≥ 0.65. Below bar → add data for weakest class first, then tune `max_features` / n-grams.
 
 ### Keyword rules (force HIGH priority, applied AFTER model, in FastAPI)
 
-Critical words (case-insensitive, match whole words): `ragging, harassment, harass, unsafe, threat, threaten, assault, abuse, suicide, self-harm, emergency, urgent, discriminat*, bribe, corruption, stalking, molestation`.
+Critical words (case-insensitive, matched from the start of a word with any ending, so `threat` also catches "threatens" and "threatened"): stems `ragging, ragged, harass, unsafe, threat, assault, abus, suicid, emergenc, urgen, discriminat, brib, stalk, molest`; plus `corrupt` / `corruption` (not "corrupted"), `self-harm` / `self harm`, `kill` (with `-s/-ed/-ing`), `rape` and its forms, "end / ending my / his / her / their life", "acid attack". The exact pattern is in `ml-service/rules.py`.
 
 - If any keyword hits → `priority=HIGH`, `keyword_override=true` regardless of model output. Log the matched keyword.
 - Harassment-category predictions default to at least MEDIUM even without keywords.
@@ -404,6 +407,8 @@ http.cors(Customizer.withDefaults())
 #### Step 6 — Dataset
 
 **Goal:** `grievances.csv` and `sanity.csv` as specified in §4. This is manual writing work, not code — and it decides how good the "AI" is.
+
+> **Note on the delivered dataset.** The delivered files were drafted with AI assistance rather than by hand. The reading-and-correcting work below still has to be done by the student before submission; see `ml-service/data/README.md`.
 
 **Build:**
 - Write ~30 complaints per category by hand: realistic college-student wording, 1–3 sentences, mixed lengths, a spread of all three priorities per category. Each gets a unique `group_id` (e.g. `HOS-017`).
@@ -729,10 +734,10 @@ Tick a step only after its Verify list passes and the review is addressed.
 - [x] 5. Auth endpoints
 
 **Phase B — ML service**
-- [ ] 6. Dataset
-- [ ] 7. Training script
-- [ ] 8. Evaluation
-- [ ] 9. Prediction API
+- [x] 6. Dataset
+- [x] 7. Training script
+- [x] 8. Evaluation
+- [x] 9. Prediction API
 
 **Phase C — Backend core flow**
 - [x] 10. ML client
@@ -801,9 +806,11 @@ Free tiers change often — re-verify limits at Step 26 before deploying (see So
 | `PORT` | `8080` | platform sets |
 | `SPRING_DATASOURCE_URL` | `jdbc:mysql://host:3306/grievance?sslMode=REQUIRED` | yes |
 | `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | — | yes |
+| `DB_POOL_SIZE` | Hikari `maximum-pool-size` (default `4`; keep below the MySQL plan's connection cap) | no |
 | `JWT_SECRET` | 256-bit random (≥32 chars) | yes |
 | `JWT_EXPIRATION_MS` | `86400000` | yes |
 | `ML_URL` | `https://<ml-service>` (base URL, no path — the client appends `/predict` and `/health`) | yes |
+| `ML_MIN_CONFIDENCE` | category confidence below this goes to manual triage unless a keyword matched (default `0.25`) | no |
 | `MAIL_ENABLED` | `true` / `false` (false = log emails to console) | yes |
 | `MAIL_HOST/MAIL_PORT/MAIL_USERNAME/MAIL_PASSWORD/MAIL_FROM` | any free SMTP provider | if `MAIL_ENABLED=true` |
 | `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | `true` for real SMTP providers (default `false` for a local mail catcher) | if `MAIL_ENABLED=true` |

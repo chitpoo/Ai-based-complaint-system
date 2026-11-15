@@ -4,9 +4,11 @@ import com.grievance.enums.Category;
 import com.grievance.enums.Priority;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Optional;
 
@@ -19,9 +21,12 @@ import java.util.Optional;
 public class MlClient {
 
     private final RestClient restClient;
+    private final double minConfidence;
 
-    public MlClient(@Qualifier("mlRestClient") RestClient restClient) {
+    public MlClient(@Qualifier("mlRestClient") RestClient restClient,
+                    @Value("${app.ml.min-confidence}") double minConfidence) {
         this.restClient = restClient;
+        this.minConfidence = minConfidence;
     }
 
     public Optional<MlPrediction> predict(String title, String description) {
@@ -41,9 +46,24 @@ public class MlClient {
                 log.warn("ML service returned UNCLASSIFIED, which it must never do");
                 return Optional.empty();
             }
-            return Optional.of(new MlPrediction(category, priority, body.categoryConfidence(), body.keywordOverride()));
+            // Text with no word the model knows (gibberish, another script) still gets a category,
+            // decided by the model's bias alone and with a low score. Routing that to a department
+            // would be a guess, so it goes to manual triage instead. A critical keyword is the
+            // exception: such a grievance must reach a department queue without waiting.
+            // A missing confidence is treated like a low one: there is nothing to trust it by.
+            Double confidence = body.categoryConfidence();
+            if (!body.keywordOverride() && (confidence == null || confidence < minConfidence)) {
+                log.info("ML category confidence {} is below the floor {}, falling back to manual triage",
+                        confidence, minConfidence);
+                return Optional.empty();
+            }
+            return Optional.of(new MlPrediction(category, priority, confidence, body.keywordOverride()));
+        } catch (RestClientResponseException ex) {
+            // Status only: FastAPI's 422 body echoes the submitted text, which must not reach the log.
+            log.warn("ML service answered HTTP {}, falling back to manual triage", ex.getStatusCode().value());
+            return Optional.empty();
         } catch (Exception ex) {
-            // Covers timeouts, connection refused, non-2xx replies and unknown enum strings.
+            // Covers timeouts, connection refused and unknown enum strings.
             log.warn("ML prediction unavailable, falling back to manual triage: {}", ex.getMessage());
             return Optional.empty();
         }

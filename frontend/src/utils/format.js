@@ -1,8 +1,13 @@
 export const label = (value) => (value ? value.replaceAll('_', ' ') : '');
 
+const HAS_ZONE = /(Z|[+-]\d{2}:?\d{2})$/i;
+
 export function formatDate(value) {
   if (!value) return '-';
-  return new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  // The backend runs in UTC and sends timestamps without a zone. Without the "Z" the browser
+  // would read them as local time and show them 5.5 hours off in India.
+  const iso = HAS_ZONE.test(value) ? value : `${value}Z`;
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 export const STATUSES = ['SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'ESCALATED'];
