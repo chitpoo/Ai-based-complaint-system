@@ -10,13 +10,14 @@ import java.time.LocalDateTime;
 /** One row of a list (my grievances, officer queue, admin list). */
 public record GrievanceSummaryResponse(Long id, String trackingId, String title, Category category,
                                        Priority priority, GrievanceStatus status, Long departmentId,
-                                       String departmentName, boolean escalated, LocalDateTime createdAt) {
+                                       String departmentName, boolean escalated, boolean anonymous,
+                                       LocalDateTime createdAt) {
 
     public static GrievanceSummaryResponse from(Grievance g) {
         return new GrievanceSummaryResponse(g.getId(), g.getTrackingId(), g.getTitle(), g.getCategory(),
                 g.getPriority(), g.getStatus(),
                 g.getDepartment() == null ? null : g.getDepartment().getId(),
                 g.getDepartment() == null ? null : g.getDepartment().getName(),
-                g.isEscalated(), g.getCreatedAt());
+                g.isEscalated(), g.isAnonymous(), g.getCreatedAt());
     }
 }

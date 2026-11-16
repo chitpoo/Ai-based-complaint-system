@@ -88,6 +88,10 @@ public class Grievance {
     @Column(name = "is_escalated", nullable = false)
     private boolean escalated = false;
 
+    /** Hide-identity mode: officers see "Anonymous"; the owner and admins still see the name. */
+    @Column(name = "is_anonymous", nullable = false)
+    private boolean anonymous = false;
+
     @Column(name = "escalated_at")
     private LocalDateTime escalatedAt;
 

@@ -77,10 +77,11 @@ public class GrievanceService {
         String title = request.title().trim();
         String description = request.description().trim();
         Optional<MlPrediction> prediction = mlClient.predict(title, description);
-        return transactionTemplate.execute(tx -> save(title, description, owner.getId(), prediction));
+        boolean anonymous = request.wantsAnonymity();
+        return transactionTemplate.execute(tx -> save(title, description, anonymous, owner.getId(), prediction));
     }
 
-    private GrievanceCreatedResponse save(String title, String description, Long ownerId,
+    private GrievanceCreatedResponse save(String title, String description, boolean anonymous, Long ownerId,
                                           Optional<MlPrediction> prediction) {
         User owner = userRepository.getReferenceById(ownerId);
         Department department = prediction
@@ -92,6 +93,7 @@ public class GrievanceService {
         grievance.setUser(owner);
         grievance.setTitle(title);
         grievance.setDescription(description);
+        grievance.setAnonymous(anonymous);
         grievance.setCategory(prediction.map(MlPrediction::category).orElse(Category.UNCLASSIFIED));
         grievance.setPriority(prediction.map(MlPrediction::priority).orElse(Priority.MEDIUM));
         grievance.setAiConfidence(prediction.map(MlPrediction::categoryConfidence)
@@ -112,7 +114,8 @@ public class GrievanceService {
         events.publishEvent(new StatusChangedEvent(grievance.getId(), null, grievance.getStatus(), null, !routed));
 
         return new GrievanceCreatedResponse(grievance.getId(), grievance.getTrackingId(), grievance.getCategory(),
-                grievance.getPriority(), grievance.getStatus(), routed ? department.getName() : null);
+                grievance.getPriority(), grievance.getStatus(), routed ? department.getName() : null,
+                grievance.isAnonymous());
     }
 
     // ----------------------------------------------------------------- reads
@@ -147,7 +150,7 @@ public class GrievanceService {
         List<GrievanceDetailResponse.HistoryEntry> history = historyRepository
                 .findByGrievanceIdOrderByCreatedAtAscIdAsc(id).stream()
                 .map(h -> new GrievanceDetailResponse.HistoryEntry(h.getOldStatus(), h.getNewStatus(),
-                        h.getChangedBy() == null ? null : h.getChangedBy().getName(),
+                        h.getChangedBy() == null ? null : IdentityPolicy.displayName(h.getChangedBy(), g, actor),
                         h.getRemark(), h.getCreatedAt()))
                 .toList();
         return new GrievanceDetailResponse(g.getId(), g.getTrackingId(), g.getTitle(), g.getDescription(),
@@ -157,7 +160,7 @@ public class GrievanceService {
                 g.getDepartment() == null ? null : g.getDepartment().getName(),
                 g.getOfficer() == null ? null : g.getOfficer().getId(),
                 g.getOfficer() == null ? null : g.getOfficer().getName(),
-                g.getUser().getName(), history);
+                IdentityPolicy.displayName(g.getUser(), g, actor), g.isAnonymous(), history);
     }
 
     /** The officer's department queue. An officer with no department sees nothing. */
