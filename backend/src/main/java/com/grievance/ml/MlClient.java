@@ -69,6 +69,20 @@ public class MlClient {
         }
     }
 
+    /**
+     * Asks the ML service's /health right now. Used by the admin dashboard so a stopped service
+     * is noticed, instead of every new grievance quietly going to manual triage.
+     */
+    public boolean isAvailable() {
+        try {
+            restClient.get().uri("/health").retrieve().toBodilessEntity();
+            return true;
+        } catch (Exception ex) {
+            log.debug("ML health check failed: {}", ex.getMessage());
+            return false;
+        }
+    }
+
     /** Wakes a sleeping free-tier ML instance. Runs off the request thread; errors are ignored. */
     @Async
     public void warmUp() {

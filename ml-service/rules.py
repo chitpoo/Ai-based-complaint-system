@@ -11,6 +11,9 @@ import re
 _STEMS = (
     "ragging", "ragged", "harass", "unsafe", "threat", "assault", "abus", "suicid",
     "emergenc", "urgen", "discriminat", "brib", "stalk", "molest",
+    # Physical violence and bullying. "attack" also catches "heart attack", which is an
+    # emergency too. "injur" catches "injured", "injury".
+    "bully", "bullie", "attack", "injur", "weapon", "knife", "knives",
 )
 
 _CRITICAL_PATTERN = re.compile(
@@ -23,7 +26,13 @@ _CRITICAL_PATTERN = re.compile(
     r"|\bkill(?:s|ed|ing)?\b"
     r"|\brap(?:e|es|ed|ing|ist|ists)\b"
     r"|\bend(?:ing)?\s+(?:my|his|her|their)\s+life\b"
-    r"|\bacid\s+attack\w*",
+    r"|\bacid\s+attack\w*"
+    # Assault in everyday words. "beat" counts only as "beat ... up" or "beaten", so "beat the
+    # deadline" does not match. "hit" and the like need a person after them ("hit me").
+    r"|\bbeat(?:s|en|ing)?\s+(?:\w+\s+){0,2}up\b"
+    r"|\bbeaten\b"
+    r"|\b(?:hit|hits|hitting|slapp?ed|slapping|punch(?:ed|es|ing)|kick(?:ed|ing))\s+(?:me|him|her|them|us|my)\b"
+    r"|\bfight(?:s|ing)?\b|\bfought\b",
     re.IGNORECASE,
 )
 
