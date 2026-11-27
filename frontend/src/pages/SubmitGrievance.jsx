@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import client, { errorMessage } from '../api/client.js';
-import { PriorityBadge } from '../components/Badges.jsx';
+import { AnonymousBadge, CategoryText, PriorityBadge } from '../components/Badges.jsx';
 import { ErrorAlert } from '../components/Feedback.jsx';
-import { label } from '../utils/format.js';
+import Icon from '../components/Icons.jsx';
 
 const TITLE_MAX = 200;
 const DESCRIPTION_MAX = 5000;
@@ -22,13 +22,19 @@ function ResultCard({ result, onAnother }) {
   };
 
   return (
-    <div className="card shadow-sm border-success">
-      <div className="card-body p-4">
-        <h1 className="h4 text-success">Grievance submitted</h1>
+    <div className="card">
+      <div className="card-body p-4 p-md-5">
+        <div className="d-flex align-items-center gap-3 mb-3">
+          <span className="success-mark"><Icon name="check" size={24} /></span>
+          <div>
+            <h1 className="h4 mb-0">Grievance submitted</h1>
+            {result.anonymous && <div className="mt-1"><AnonymousBadge /></div>}
+          </div>
+        </div>
         <p className="text-muted">Keep this tracking ID. Anyone who has it can check the status, without logging in.</p>
-        <div className="d-flex align-items-center gap-2 mb-4">
-          <span className="fs-4 tracking-id">{result.trackingId}</span>
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={copy}>
+        <div className="tracking-box mb-4">
+          <span className="tracking-id">{result.trackingId}</span>
+          <button type="button" className="btn btn-outline-primary btn-sm" onClick={copy} aria-live="polite">
             {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
@@ -37,14 +43,20 @@ function ResultCard({ result, onAnother }) {
             Received — awaiting manual review. An administrator will send it to the right department.
           </div>
         ) : (
-          <dl className="row mb-4">
+          <dl className="row mb-4 detail-list">
             <dt className="col-sm-4">Category</dt>
-            <dd className="col-sm-8">{label(result.category)}</dd>
+            <dd className="col-sm-8"><CategoryText category={result.category} /></dd>
             <dt className="col-sm-4">Priority</dt>
             <dd className="col-sm-8"><PriorityBadge priority={result.priority} /></dd>
             <dt className="col-sm-4">Sent to</dt>
             <dd className="col-sm-8">{result.departmentName}</dd>
           </dl>
+        )}
+        {result.anonymous && (
+          <p className="small text-muted">
+            The officers handling this grievance will see “Anonymous” in place of your name. Administrators can still
+            see who submitted it.
+          </p>
         )}
         <div className="d-flex flex-wrap gap-2">
           <Link className="btn btn-primary" to={`/track/${result.trackingId}`}>Open tracking page</Link>
@@ -59,6 +71,7 @@ function ResultCard({ result, onAnother }) {
 export default function SubmitGrievance() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [anonymous, setAnonymous] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
@@ -72,10 +85,13 @@ export default function SubmitGrievance() {
     setError('');
     setBusy(true);
     try {
-      const res = await client.post('/grievances', { title: title.trim(), description: description.trim() });
+      const res = await client.post('/grievances', {
+        title: title.trim(), description: description.trim(), anonymous,
+      });
       setResult(res.data);
       setTitle('');
       setDescription('');
+      setAnonymous(false);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -83,14 +99,14 @@ export default function SubmitGrievance() {
     }
   };
 
-  if (result) return <div className="mx-auto" style={{ maxWidth: 640 }}><ResultCard result={result} onAnother={() => setResult(null)} /></div>;
+  if (result) return <div className="mx-auto" style={{ maxWidth: 680 }}><ResultCard result={result} onAnother={() => setResult(null)} /></div>;
 
   return (
-    <div className="mx-auto" style={{ maxWidth: 640 }}>
-      <div className="card shadow-sm">
-        <div className="card-body p-4">
-          <h1 className="h4 mb-1">Submit a grievance</h1>
-          <p className="text-muted">Describe the problem. It is categorised and sent to the right department automatically.</p>
+    <div className="mx-auto" style={{ maxWidth: 680 }}>
+      <div className="card">
+        <div className="card-body p-4 p-md-5">
+          <h1 className="h3 fw-semibold mb-1">Submit a grievance</h1>
+          <p className="text-muted mb-4">Describe the problem. It is categorised and sent to the right department automatically.</p>
           <ErrorAlert message={error} />
           <form onSubmit={handleSubmit} noValidate>
             <div className="mb-3">
@@ -106,8 +122,23 @@ export default function SubmitGrievance() {
                 value={description} onChange={(e) => setDescription(e.target.value)} />
               <div className="form-text text-end">{description.length} / {DESCRIPTION_MAX}</div>
             </div>
-            <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? 'Submitting…' : 'Submit grievance'}
+            <label className={`option-card mb-4 ${anonymous ? 'on' : ''}`} htmlFor="anonymous">
+              <span className="form-check form-switch p-0 m-0">
+                <input id="anonymous" type="checkbox" role="switch" className="form-check-input"
+                  aria-describedby="anonymous-help" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
+              </span>
+              <span>
+                <span className="fw-medium d-flex align-items-center gap-2">
+                  <Icon name="eyeOff" size={16} /> Submit anonymously
+                </span>
+                <span id="anonymous-help" className="d-block small text-muted mt-1">
+                  Department officers will see “Anonymous” in place of your name. Administrators can still see who
+                  submitted it, and you keep getting updates. Avoid putting your name in the text itself.
+                </span>
+              </span>
+            </label>
+            <button type="submit" className="btn btn-primary px-4 py-2" disabled={busy}>
+              {busy ? 'Submitting…' : anonymous ? 'Submit anonymously' : 'Submit grievance'}
             </button>
           </form>
         </div>

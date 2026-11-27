@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import client, { errorMessage } from '../api/client.js';
-import { ErrorAlert } from '../components/Feedback.jsx';
+import { ErrorAlert, PageHeader } from '../components/Feedback.jsx';
 import Overview from './admin/Overview.jsx';
 import AllGrievances from './admin/AllGrievances.jsx';
 import Officers from './admin/Officers.jsx';
@@ -36,8 +36,8 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <h1 className="h4 mb-3">Admin dashboard</h1>
-      <ul className="nav nav-tabs mb-4">
+      <PageHeader title="Admin dashboard" subtitle="Workload, overdue grievances, officers and departments." />
+      <ul className="nav nav-underline mb-4">
         {TABS.map((name) => (
           <li className="nav-item" key={name}>
             <button type="button" className={`nav-link ${tab === name ? 'active' : ''}`} onClick={() => setTab(name)}>

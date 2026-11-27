@@ -38,6 +38,9 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
+      <footer className="app-footer">
+        <div className="container page">AI-Powered Grievance Management and Resolution System</div>
+      </footer>
     </>
   );
 }

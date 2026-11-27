@@ -1,5 +1,8 @@
 export const label = (value) => (value ? value.replaceAll('_', ' ') : '');
 
+/** IN_PROGRESS -> "In progress": how statuses, priorities and categories are shown. */
+export const titleCase = (value) => label(value).toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+
 const HAS_ZONE = /(Z|[+-]\d{2}:?\d{2})$/i;
 
 export function formatDate(value) {

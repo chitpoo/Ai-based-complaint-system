@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import client, { errorMessage } from '../api/client.js';
-import { EmptyState, ErrorAlert, Loading } from '../components/Feedback.jsx';
+import { EmptyState, ErrorAlert, Loading, PageHeader } from '../components/Feedback.jsx';
 import GrievanceTable from '../components/GrievanceTable.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { STATUSES, label } from '../utils/format.js';
+import { STATUSES, titleCase } from '../utils/format.js';
 
 export default function OfficerQueue() {
   const { user } = useAuth();
@@ -26,28 +26,35 @@ export default function OfficerQueue() {
 
   return (
     <>
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h1 className="h4 mb-0">Department queue</h1>
+      <PageHeader title="Department queue" subtitle="Open a grievance to read it and update its status.">
         <select className="form-select w-auto" aria-label="Filter by status" value={status}
           onChange={(e) => setStatus(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.filter((s) => s !== 'SUBMITTED').map((s) => (
-            <option key={s} value={s}>{label(s)}</option>
+            <option key={s} value={s}>{titleCase(s)}</option>
           ))}
         </select>
-      </div>
+      </PageHeader>
       {user.departmentId == null && (
         <div className="alert alert-warning">Your account is not linked to a department yet. Ask an administrator.</div>
       )}
       <ErrorAlert message={error} />
       {!error && rows === null && <Loading />}
-      {rows && rows.length === 0 && <EmptyState>No grievances {status ? `with status ${label(status)}` : 'in your department'}.</EmptyState>}
+      {rows && rows.length === 0 && (
+        <div className="card">
+          <EmptyState>No grievances {status ? `with status “${titleCase(status)}”` : 'in your department'}.</EmptyState>
+        </div>
+      )}
       {rows && rows.length > 0 && (
-        <div className="card shadow-sm">
+        <div className="card">
           <GrievanceTable rows={rows} />
         </div>
       )}
-      <p className="text-muted small mt-3">Open a grievance to read it and update its status.</p>
+      {rows?.some((g) => g.anonymous) && (
+        <p className="text-muted small mt-3">
+          Grievances marked with the crossed-eye icon were submitted anonymously; the submitter's name is hidden from you.
+        </p>
+      )}
     </>
   );
 }

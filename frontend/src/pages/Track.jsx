@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import client, { errorMessage } from '../api/client.js';
 import { CategoryText, PriorityBadge, StatusBadge } from '../components/Badges.jsx';
 import { ErrorAlert, Loading } from '../components/Feedback.jsx';
+import Icon from '../components/Icons.jsx';
 import Timeline from '../components/Timeline.jsx';
 
 /** Public page: works logged out and shows only what the public endpoint returns. */
@@ -38,17 +39,22 @@ export default function Track() {
 
   return (
     <div className="mx-auto" style={{ maxWidth: 640 }}>
-      <h1 className="h4 mb-3">Track a grievance</h1>
-      <form className="input-group mb-4" onSubmit={handleSubmit}>
+      <div className="track-hero">
+        <h1>Track a grievance</h1>
+        <p className="text-muted">Enter the tracking ID you were given when it was submitted. No login needed.</p>
+      </div>
+      <form className="input-group input-group-lg mb-4" onSubmit={handleSubmit}>
         <input className="form-control tracking-id" placeholder="GRV-2026-123456" aria-label="Tracking ID"
-          value={input} onChange={(e) => setInput(e.target.value)} />
-        <button type="submit" className="btn btn-primary" disabled={!input.trim()}>Track</button>
+          autoCapitalize="characters" spellCheck={false} value={input} onChange={(e) => setInput(e.target.value)} />
+        <button type="submit" className="btn btn-primary d-inline-flex align-items-center gap-2 px-4" disabled={!input.trim()}>
+          <Icon name="search" size={18} /> Track
+        </button>
       </form>
 
       {loading && <Loading />}
       <ErrorAlert message={error} />
       {result && (
-        <div className="card shadow-sm">
+        <div className="card">
           <div className="card-body p-4">
             <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
               <div>
@@ -57,13 +63,13 @@ export default function Track() {
               </div>
               <StatusBadge status={result.status} />
             </div>
-            <dl className="row mb-4">
+            <dl className="row mb-4 detail-list">
               <dt className="col-sm-3">Category</dt>
               <dd className="col-sm-9"><CategoryText category={result.category} /></dd>
               <dt className="col-sm-3">Priority</dt>
               <dd className="col-sm-9"><PriorityBadge priority={result.priority} /></dd>
             </dl>
-            <h3 className="h6">Progress</h3>
+            <h3 className="section-title">Progress</h3>
             <Timeline steps={result.statusHistory} />
           </div>
         </div>

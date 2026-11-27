@@ -44,9 +44,9 @@ export default function Officers({ departments, officers, onChanged }) {
   return (
     <div className="row g-4">
       <div className="col-lg-5">
-        <div className="card shadow-sm">
+        <div className="card">
           <div className="card-body p-4">
-            <h2 className="h6">Create officer account</h2>
+            <h2 className="section-title">Create officer account</h2>
             <ErrorAlert message={error} />
             {created && <div className="alert alert-success">{created}</div>}
             <form onSubmit={handleSubmit} noValidate>
@@ -82,7 +82,7 @@ export default function Officers({ departments, officers, onChanged }) {
         </div>
       </div>
       <div className="col-lg-7">
-        <div className="card shadow-sm">
+        <div className="card">
           {officers.length === 0 ? (
             <EmptyState>No officers yet. Create one so departments can work their queues.</EmptyState>
           ) : (

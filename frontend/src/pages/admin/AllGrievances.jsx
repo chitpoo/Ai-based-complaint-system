@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import client, { errorMessage } from '../../api/client.js';
 import { EmptyState, ErrorAlert, Loading } from '../../components/Feedback.jsx';
 import GrievanceTable from '../../components/GrievanceTable.jsx';
-import { CATEGORIES, PRIORITIES, STATUSES, label } from '../../utils/format.js';
+import { CATEGORIES, PRIORITIES, STATUSES, titleCase } from '../../utils/format.js';
 import AssignControl from './AssignControl.jsx';
 
 const PAGE_SIZE = 20;
@@ -12,7 +12,7 @@ function Filter({ name, value, options, onChange }) {
     <select className="form-select w-auto" aria-label={name} value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">All {name}</option>
       {options.map((option) => (
-        <option key={option} value={option}>{option === 'UNCLASSIFIED' ? 'Awaiting review' : label(option)}</option>
+        <option key={option} value={option}>{option === 'UNCLASSIFIED' ? 'Awaiting review' : titleCase(option)}</option>
       ))}
     </select>
   );
@@ -62,10 +62,10 @@ export default function AllGrievances({ departments, officers }) {
       </div>
       <ErrorAlert message={error} />
       {!error && !data && <Loading />}
-      {data && data.content.length === 0 && <EmptyState>No grievances match these filters.</EmptyState>}
+      {data && data.content.length === 0 && <div className="card"><EmptyState icon="search">No grievances match these filters.</EmptyState></div>}
       {data && data.content.length > 0 && (
         <>
-          <div className="card shadow-sm">
+          <div className="card">
             <GrievanceTable rows={data.content} showDepartment
               extra={{
                 header: 'Assign',

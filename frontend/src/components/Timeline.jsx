@@ -13,7 +13,7 @@ export default function Timeline({ steps }) {
         <li key={index}>
           <div>
             {step.from && step.from === step.status ? (
-              <span className="badge text-bg-light border">Reassigned</span>
+              <span className="pill pill-slate">Reassigned</span>
             ) : (
               <StatusBadge status={step.status} />
             )}
@@ -23,9 +23,9 @@ export default function Timeline({ steps }) {
             <div className="small mt-1">
               {step.by !== undefined && <span className="text-muted">by {step.by || 'System'}</span>}
               {step.from && step.from !== step.status && (
-                <span className="text-muted"> · from {label(step.from)}</span>
+                <span className="text-muted"> · from {label(step.from).toLowerCase()}</span>
               )}
-              {step.remark && <div>{step.remark}</div>}
+              {step.remark && <div className="remark">{step.remark}</div>}
             </div>
           )}
         </li>

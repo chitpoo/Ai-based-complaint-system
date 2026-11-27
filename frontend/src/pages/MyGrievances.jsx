@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client, { errorMessage } from '../api/client.js';
-import { EmptyState, ErrorAlert, Loading } from '../components/Feedback.jsx';
+import { EmptyState, ErrorAlert, Loading, PageHeader } from '../components/Feedback.jsx';
+import Icon from '../components/Icons.jsx';
 import GrievanceTable from '../components/GrievanceTable.jsx';
 
 export default function MyGrievances() {
@@ -17,19 +18,23 @@ export default function MyGrievances() {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h1 className="h4 mb-0">My grievances</h1>
-        <Link className="btn btn-primary" to="/submit">Submit grievance</Link>
-      </div>
+      <PageHeader title="My grievances" subtitle="Everything you have submitted, newest first.">
+        <Link className="btn btn-primary d-inline-flex align-items-center gap-1" to="/submit">
+          <Icon name="plus" size={16} /> Submit grievance
+        </Link>
+      </PageHeader>
       <ErrorAlert message={error} />
       {!error && rows === null && <Loading />}
       {rows && rows.length === 0 && (
-        <EmptyState>
-          You have not submitted any grievances yet. <Link to="/submit">Submit your first one</Link>.
-        </EmptyState>
+        <div className="card">
+          <EmptyState>
+            <p className="mb-3">You have not submitted any grievances yet.</p>
+            <Link className="btn btn-primary" to="/submit">Submit your first one</Link>
+          </EmptyState>
+        </div>
       )}
       {rows && rows.length > 0 && (
-        <div className="card shadow-sm">
+        <div className="card">
           <GrievanceTable rows={rows} />
         </div>
       )}

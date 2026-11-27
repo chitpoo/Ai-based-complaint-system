@@ -30,7 +30,7 @@ Conventions: `backend/` = Spring Boot 3.4 / Java 17 / MySQL 8 · `ml-service/` =
 | Feature | Why deferred |
 |---|---|
 | File attachments | Storage + validation + size/time cost |
-| Anonymous submission | Auth/tracking edge cases; needs separate flow |
+| Fully anonymous submission (no login) | Auth/tracking edge cases; needs separate flow. The simpler hide-identity mode (logged in, name hidden from officers) is built |
 | Feedback / rating | Needs resolved-flow stable first; `feedback` table designed now, built later |
 | Advanced analytics | Trends, charts, exports; MVP keeps basic counts only |
 
@@ -94,6 +94,7 @@ Seed 5 rows, one per category: ACADEMIC, HOSTEL, INFRASTRUCTURE, FINANCE, HARASS
 | priority | VARCHAR(10) NOT NULL | `priority` enum |
 | status | VARCHAR(20) NOT NULL | `status` enum, default `SUBMITTED` |
 | ai_confidence | DECIMAL(5,4) NULL | `category_confidence` from ML service (0–1); NULL on fallback |
+| is_anonymous | BOOLEAN | default FALSE; hide-identity mode: the submitter is still stored, but the API shows "Anonymous" in place of their name to everyone except the owner and admins |
 | is_escalated | BOOLEAN | default FALSE; stays TRUE forever once escalated (status moves on, flag is the record) |
 | escalated_at | TIMESTAMP NULL | |
 | resolved_at | TIMESTAMP NULL | set on RESOLVED |
@@ -836,6 +837,7 @@ Deploy order: MySQL → ML service → backend (verify `/predict` wiring + login
 | `POST /api/auth/login` | 200 + role; wrong password → 401 |
 | `GET /api/users/me` | 200 with token; 401 without |
 | `POST /api/grievances` | 201 + tracking ID + category/priority + status `ASSIGNED`; unauthenticated → 401; empty description → 400 |
+| Hide-identity mode | submit with `anonymous: true` → `GET /api/grievances/{id}` as the department officer shows `submittedBy: "Anonymous"` and the name appears nowhere in the response; owner and admin still see the name |
 | `GET /api/grievances/my` | only own rows; other user's ID via `/{id}` → 403 |
 | `GET /api/grievances/track/{id}` | valid → 200 limited fields; bogus ID → 404; no emails/description leaked |
 | `GET /api/grievances/assigned` | OFFICER sees own dept queue only; USER → 403 |
@@ -882,7 +884,7 @@ Save as `docs/postman-collection.json` with `{{baseUrl}}` + `{{token}}` variable
 | 1 | Unit + integration tests | Transition table, tracking-ID generator, ML fallback, auth guards — highest review value per hour |
 | 2 | Feedback / rating | Build `feedback` table (§2), `POST /api/grievances/{id}/feedback` (owner, after RESOLVED), show on admin dashboard |
 | 3 | File attachments | Upload (5MB cap, images/PDF), type/size validation, object storage or `uploads/`; link to grievance |
-| 4 | Anonymous submission | Optional-auth submit flow; tracking ID + PIN instead of login for tracking |
+| 4 | Fully anonymous submission | Optional-auth submit flow; tracking ID + PIN instead of login for tracking. Hide-identity mode is already built: `anonymous: true` on `POST /api/grievances` masks the submitter's name from officers (`IdentityPolicy`) |
 | 5 | Advanced analytics | Trend charts (volume over time), SLA compliance %, CSV export |
 | 6 | Polish for review | Auto-generated API docs, CI pipeline, grow dataset toward ~150 rows/category |
 | 7 | Docs | ER diagram, sequence diagrams, final report in `docs/`; update README roadmap checkboxes |

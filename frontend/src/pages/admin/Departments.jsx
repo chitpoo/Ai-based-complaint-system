@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import client, { errorMessage } from '../../api/client.js';
-import { label } from '../../utils/format.js';
+import { titleCase } from '../../utils/format.js';
 
 function DepartmentRow({ department, onChanged }) {
   const [slaHours, setSlaHours] = useState(String(department.slaHours));
@@ -29,7 +29,7 @@ function DepartmentRow({ department, onChanged }) {
   return (
     <tr>
       <td>{department.name}</td>
-      <td>{label(department.category)}</td>
+      <td>{titleCase(department.category)}</td>
       <td>
         <input type="email" className="form-control form-control-sm" aria-label={`Email for ${department.name}`}
           placeholder="No notification email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -50,7 +50,7 @@ function DepartmentRow({ department, onChanged }) {
 
 export default function Departments({ departments, onChanged }) {
   return (
-    <div className="card shadow-sm">
+    <div className="card">
       <div className="table-responsive">
         <table className="table align-middle mb-0">
           <thead>

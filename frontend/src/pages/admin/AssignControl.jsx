@@ -31,7 +31,7 @@ export default function AssignControl({ grievance, departments, officers, onAssi
   };
 
   return (
-    <div style={{ minWidth: 230 }}>
+    <div style={{ minWidth: 210 }}>
       <div className="d-flex gap-1">
         <select className="form-select form-select-sm" aria-label="Department" value={departmentId}
           onChange={(e) => { setDepartmentId(e.target.value); setOfficerId(''); }}>

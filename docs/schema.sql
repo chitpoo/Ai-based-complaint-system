@@ -31,6 +31,7 @@ CREATE TABLE `grievances` (
   `category` varchar(30) NOT NULL,
   `created_at` datetime(6) NOT NULL,
   `description` text NOT NULL,
+  `is_anonymous` bit(1) NOT NULL,
   `is_escalated` bit(1) NOT NULL,
   `escalated_at` datetime(6) DEFAULT NULL,
   `priority` varchar(10) NOT NULL,

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { formatDate } from '../utils/format.js';
-import { CategoryText, PriorityBadge, StatusBadge } from './Badges.jsx';
+import { AnonymousBadge, CategoryText, PriorityBadge, StatusBadge } from './Badges.jsx';
 
 /** Shared list table. `extra` adds one more column, e.g. the admin's reassign control. */
 export default function GrievanceTable({ rows, showDepartment = false, extra }) {
@@ -25,7 +25,10 @@ export default function GrievanceTable({ rows, showDepartment = false, extra }) 
               <td className="tracking-id">
                 <Link to={`/grievances/${g.id}`}>{g.trackingId}</Link>
               </td>
-              <td>{g.title}</td>
+              <td className="cell-title">
+                <span className="me-2">{g.title}</span>
+                {g.anonymous && <AnonymousBadge compact />}
+              </td>
               <td>
                 <CategoryText category={g.category} />
               </td>
@@ -35,11 +38,11 @@ export default function GrievanceTable({ rows, showDepartment = false, extra }) 
               <td>
                 <StatusBadge status={g.status} />
                 {g.escalated && g.status !== 'ESCALATED' && (
-                  <span className="badge text-bg-light border ms-1">was escalated</span>
+                  <span className="pill pill-amber ms-1">Was escalated</span>
                 )}
               </td>
               {showDepartment && <td>{g.departmentName || <span className="text-muted">Unrouted</span>}</td>}
-              <td className="text-nowrap small">{formatDate(g.createdAt)}</td>
+              <td className="text-nowrap small text-muted">{formatDate(g.createdAt)}</td>
               {extra && <td>{extra.render(g)}</td>}
             </tr>
           ))}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { errorMessage } from '../api/client.js';
+import AuthLayout from '../components/AuthLayout.jsx';
 import { ErrorAlert } from '../components/Feedback.jsx';
 import { homeFor, useAuth } from '../context/AuthContext.jsx';
 
@@ -41,37 +42,34 @@ export default function Register() {
   };
 
   return (
-    <div className="page-narrow mx-auto">
-      <div className="card shadow-sm">
-        <div className="card-body p-4">
-          <h1 className="h4 mb-3">Create an account</h1>
-          <ErrorAlert message={error} />
-          <form onSubmit={handleSubmit} noValidate>
-            <div className="mb-3">
-              <label className="form-label" htmlFor="name">Full name</label>
-              <input id="name" className="form-control" autoComplete="name" maxLength={100}
-                value={form.name} onChange={update('name')} />
-            </div>
-            <div className="mb-3">
-              <label className="form-label" htmlFor="email">Email</label>
-              <input id="email" type="email" className="form-control" autoComplete="email" maxLength={150}
-                value={form.email} onChange={update('email')} />
-            </div>
-            <div className="mb-3">
-              <label className="form-label" htmlFor="password">Password</label>
-              <input id="password" type="password" className="form-control" autoComplete="new-password"
-                value={form.password} onChange={update('password')} />
-              <div className="form-text">At least 8 characters.</div>
-            </div>
-            <button type="submit" className="btn btn-primary w-100" disabled={busy}>
-              {busy ? 'Creating account…' : 'Register'}
-            </button>
-          </form>
-          <p className="small text-muted mt-3 mb-0">
-            Already registered? <Link to="/login">Log in</Link>.
-          </p>
+    <AuthLayout>
+      <h1 className="h3 fw-semibold mb-1">Create an account</h1>
+      <p className="text-muted mb-4">It takes a minute. You can submit your first grievance straight away.</p>
+      <ErrorAlert message={error} />
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="mb-3">
+          <label className="form-label" htmlFor="name">Full name</label>
+          <input id="name" className="form-control" autoComplete="name" maxLength={100}
+            value={form.name} onChange={update('name')} />
         </div>
-      </div>
-    </div>
+        <div className="mb-3">
+          <label className="form-label" htmlFor="email">Email</label>
+          <input id="email" type="email" className="form-control" autoComplete="email" maxLength={150}
+            placeholder="you@example.com" value={form.email} onChange={update('email')} />
+        </div>
+        <div className="mb-4">
+          <label className="form-label" htmlFor="password">Password</label>
+          <input id="password" type="password" className="form-control" autoComplete="new-password"
+            aria-describedby="password-help" value={form.password} onChange={update('password')} />
+          <div id="password-help" className="form-text">At least 8 characters.</div>
+        </div>
+        <button type="submit" className="btn btn-primary w-100 py-2" disabled={busy}>
+          {busy ? 'Creating account…' : 'Create account'}
+        </button>
+      </form>
+      <p className="small text-muted mt-4 mb-0">
+        Already registered? <Link to="/login">Log in</Link>.
+      </p>
+    </AuthLayout>
   );
 }

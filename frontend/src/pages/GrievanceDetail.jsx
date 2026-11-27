@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import client, { errorMessage } from '../api/client.js';
-import { CategoryText, PriorityBadge, StatusBadge } from '../components/Badges.jsx';
+import { AnonymousBadge, CategoryText, PriorityBadge, StatusBadge } from '../components/Badges.jsx';
 import { ErrorAlert, Loading } from '../components/Feedback.jsx';
+import Icon from '../components/Icons.jsx';
 import Timeline from '../components/Timeline.jsx';
 import { homeFor, useAuth } from '../context/AuthContext.jsx';
-import { formatDate, label, nextStatuses } from '../utils/format.js';
+import { formatDate, nextStatuses, titleCase } from '../utils/format.js';
 
 /** Offers only the moves allowed from the current status; the backend re-checks every one. */
 function StatusForm({ grievance, role, onUpdated }) {
@@ -22,7 +23,7 @@ function StatusForm({ grievance, role, onUpdated }) {
   }, [grievance.status]);
 
   if (!options.length) {
-    return <p className="text-muted mb-0">No status change is available from {label(grievance.status)}.</p>;
+    return <p className="text-muted mb-0">No status change is available from “{titleCase(grievance.status)}”.</p>;
   }
 
   const handleSubmit = async (event) => {
@@ -46,7 +47,7 @@ function StatusForm({ grievance, role, onUpdated }) {
         <label className="form-label" htmlFor="status">Move to</label>
         <select id="status" className="form-select" value={status} onChange={(e) => setStatus(e.target.value)}>
           {options.map((option) => (
-            <option key={option} value={option}>{label(option)}</option>
+            <option key={option} value={option}>{titleCase(option)}</option>
           ))}
         </select>
       </div>
@@ -83,7 +84,11 @@ export default function GrievanceDetail() {
   }, [load]);
 
   const canUpdate = user.role === 'OFFICER' || user.role === 'ADMIN';
-  const back = <Link to={homeFor(user.role)}>&larr; Back to list</Link>;
+  const back = (
+    <Link className="d-inline-flex align-items-center gap-1" to={homeFor(user.role)}>
+      <Icon name="arrowLeft" size={16} /> Back to list
+    </Link>
+  );
 
   if (error && !grievance) return <>{back}<div className="mt-3"><ErrorAlert message={error} /></div></>;
   if (!grievance) return <Loading />;
@@ -97,17 +102,18 @@ export default function GrievanceDetail() {
       <div className="mb-3">{back}</div>
       <div className="row g-4">
         <div className="col-lg-7">
-          <div className="card shadow-sm">
+          <div className="card">
             <div className="card-body p-4">
               <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
                 <div>
-                  <div className="tracking-id text-muted">{grievance.trackingId}</div>
+                  <div className="tracking-id text-muted mb-1">{grievance.trackingId}</div>
                   <h1 className="h4 mb-0">{grievance.title}</h1>
                 </div>
                 <StatusBadge status={grievance.status} />
               </div>
-              <p className="description">{grievance.description}</p>
-              <dl className="row mb-0">
+              <p className="description mb-4">{grievance.description}</p>
+              <hr className="text-muted opacity-25" />
+              <dl className="row mb-0 detail-list">
                 <dt className="col-sm-4">Category</dt>
                 <dd className="col-sm-8">
                   <CategoryText category={grievance.category} />
@@ -126,7 +132,22 @@ export default function GrievanceDetail() {
                   </>
                 )}
                 <dt className="col-sm-4">Submitted by</dt>
-                <dd className="col-sm-8">{grievance.submittedBy}</dd>
+                <dd className="col-sm-8">
+                  {grievance.anonymous ? (
+                    <>
+                      <AnonymousBadge />
+                      {/* The server sends the real name only to the owner and to admins. */}
+                      {grievance.submittedBy !== 'Anonymous' && (
+                        <span className="ms-2">
+                          {grievance.submittedBy}
+                          <span className="text-muted small">
+                            {user.role === 'ADMIN' ? ' · visible to admins only' : ' · officers do not see your name'}
+                          </span>
+                        </span>
+                      )}
+                    </>
+                  ) : grievance.submittedBy}
+                </dd>
                 <dt className="col-sm-4">Submitted</dt>
                 <dd className="col-sm-8">{formatDate(grievance.createdAt)}</dd>
                 {grievance.escalated && (
@@ -147,16 +168,16 @@ export default function GrievanceDetail() {
         </div>
         <div className="col-lg-5">
           {canUpdate && (
-            <div className="card shadow-sm mb-4">
+            <div className="card mb-4">
               <div className="card-body p-4">
-                <h2 className="h6">Update status</h2>
+                <h2 className="section-title">Update status</h2>
                 <StatusForm grievance={grievance} role={user.role} onUpdated={load} />
               </div>
             </div>
           )}
-          <div className="card shadow-sm">
+          <div className="card">
             <div className="card-body p-4">
-              <h2 className="h6">History</h2>
+              <h2 className="section-title">History</h2>
               <Timeline steps={steps} />
             </div>
           </div>
