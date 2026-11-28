@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score, classification_report, confusion_matrix
 
 from rules import apply_rules, find_critical_keyword
+from external import load_mapped
 from train import BASE_DIR, DATA_PATH, build_text, load_dataset
 
 MODEL_DIR = Path(os.getenv("MODEL_DIR", BASE_DIR / "models"))
@@ -87,7 +88,7 @@ def print_errors(name, df, target, predicted):
     wrong = wrong[wrong[target] != wrong["predicted"]]
     print(f"\n--- {name}: misclassified {target} ({len(wrong)}) ---")
     for row in wrong.itertuples():
-        print(f"{row.group_id} | true={getattr(row, target)} predicted={row.predicted} | {row.title}")
+        print(f"{row.group_id} | true={getattr(row, target)} predicted={row.predicted} | {row.title or row.description[:80]}")
 
 
 def main() -> None:
@@ -116,6 +117,15 @@ def main() -> None:
     report_low_confidence("test split", category_model, test)
     report_low_confidence("sanity set", category_model, sanity)
 
+    external = load_mapped("test")
+    if external is not None:
+        # Real student complaints the model never trained on. Category only: this dataset has
+        # no Hostel or Harassment rows, and its severity labels follow a different policy.
+        # All five labels, so wrong answers such as HOSTEL show up in the report.
+        external_category = report("external test (University Students Complaints)", category_model,
+                                   external, "category", CATEGORY_LABELS)
+        report_low_confidence("external test", category_model, external)
+
     DOCS_DIR.mkdir(exist_ok=True)
     save_confusion_matrix(test["category"], test_category, CATEGORY_LABELS,
                           "Category - grouped test split", DOCS_DIR / "confusion_category.png")
@@ -127,6 +137,8 @@ def main() -> None:
     print_errors("test split", test, "priority", test_priority)
     print_errors("sanity set", sanity, "category", sanity_category)
     print_errors("sanity set", sanity, "priority", sanity_priority)
+    if external is not None:
+        print_errors("external test", external, "category", external_category)
 
 
 if __name__ == "__main__":

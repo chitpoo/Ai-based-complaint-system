@@ -4,6 +4,7 @@ import client, { errorMessage } from '../api/client.js';
 import { EmptyState, ErrorAlert, Loading, PageHeader } from '../components/Feedback.jsx';
 import Icon from '../components/Icons.jsx';
 import GrievanceTable from '../components/GrievanceTable.jsx';
+import StudentStats from '../components/StudentStats.jsx';
 
 export default function MyGrievances() {
   const [rows, setRows] = useState(null);
@@ -33,6 +34,7 @@ export default function MyGrievances() {
           </EmptyState>
         </div>
       )}
+      {rows && rows.length > 0 && <StudentStats rows={rows} />}
       {rows && rows.length > 0 && (
         <div className="card">
           <GrievanceTable rows={rows} />

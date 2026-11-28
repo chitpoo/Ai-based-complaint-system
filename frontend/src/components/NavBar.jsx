@@ -15,6 +15,8 @@ const LINKS = {
 const initials = (name = '') =>
   name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || '?';
 
+const ROLE_NAMES = { USER: 'Student', OFFICER: 'Officer', ADMIN: 'Administrator' };
+
 export default function NavBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -33,7 +35,7 @@ export default function NavBar() {
   return (
     <nav className="navbar navbar-expand-md app-nav sticky-top mb-4">
       <div className="container page">
-        <Link className="navbar-brand" to={user ? homeFor(user.role) : '/login'}>
+        <Link className="navbar-brand" to={user ? homeFor(user.role) : '/'}>
           <span className="brand-mark"><Icon name="logo" size={18} /></span>
           Grievance Portal
         </Link>
@@ -59,7 +61,7 @@ export default function NavBar() {
                   <span className="avatar" aria-hidden="true">{initials(user.name)}</span>
                   <div className="user-chip">
                     <div className="fw-medium small">{user.name}</div>
-                    <div className="role">{user.role}</div>
+                    <div className="role">{ROLE_NAMES[user.role] || user.role}</div>
                   </div>
                 </div>
                 <button type="button" className="btn btn-outline-secondary btn-sm align-self-start align-self-md-center"
@@ -69,9 +71,9 @@ export default function NavBar() {
               </>
             ) : (
               <>
-                <NavLink className="nav-link" to="/login">
+                <Link className="btn btn-link btn-sm nav-login align-self-start align-self-md-center" to="/login">
                   Log in
-                </NavLink>
+                </Link>
                 <Link className="btn btn-primary btn-sm align-self-start align-self-md-center" to="/register">
                   Register
                 </Link>

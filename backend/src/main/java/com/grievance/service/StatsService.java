@@ -1,5 +1,10 @@
 package com.grievance.service;
 
+import com.grievance.dto.PublicStatsResponse;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+
 import com.grievance.dto.StatsResponse;
 import com.grievance.enums.Category;
 import com.grievance.enums.GrievanceStatus;
@@ -34,6 +39,32 @@ public class StatsService {
                 fill(Priority.values(), grievanceRepository.countByPriority()),
                 overdue,
                 average == null ? null : Math.round(average * 10) / 10.0);
+    }
+
+    /** Site-wide numbers for every signed-in user; {@code days} days of daily counts, today last. */
+    @Transactional(readOnly = true)
+    public PublicStatsResponse publicStats(int days) {
+        Map<String, Long> byStatus = fill(GrievanceStatus.values(), grievanceRepository.countByStatus());
+        long total = byStatus.values().stream().mapToLong(Long::longValue).sum();
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime since = today.minusDays(days - 1L).atStartOfDay();
+        Map<LocalDate, Long> filed = perDay(grievanceRepository.countFiledPerDaySince(since));
+        Map<LocalDate, Long> resolved = perDay(grievanceRepository.countResolvedPerDaySince(since));
+        List<PublicStatsResponse.Day> daily = new ArrayList<>();
+        for (LocalDate d = since.toLocalDate(); !d.isAfter(today); d = d.plusDays(1)) {
+            daily.add(new PublicStatsResponse.Day(d, filed.getOrDefault(d, 0L), resolved.getOrDefault(d, 0L)));
+        }
+        return new PublicStatsResponse(total, byStatus, grievanceRepository.countByEscalatedTrue(), daily);
+    }
+
+    private Map<LocalDate, Long> perDay(List<Object[]> rows) {
+        Map<LocalDate, Long> out = new HashMap<>();
+        for (Object[] row : rows) {
+            LocalDate day = row[0] instanceof java.sql.Date d ? d.toLocalDate() : (LocalDate) row[0];
+            out.put(day, ((Number) row[1]).longValue());
+        }
+        return out;
     }
 
     /** Starts every enum value at 0 so the UI always gets every key, then fills in the real counts. */

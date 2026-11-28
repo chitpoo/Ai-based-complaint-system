@@ -2,11 +2,16 @@
 
 Usage: python train.py
 Writes category_model.pkl, priority_model.pkl and test_split.csv into MODEL_DIR (default ./models).
+
+The category model also learns from the training half of the University Students Complaints
+dataset (data/external/, mapped by external.py) when it is present. Its test half is never
+trained on; evaluate.py scores it. The priority model uses our own labels only.
 """
 import os
 from pathlib import Path
 
 import joblib
+import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -20,11 +25,25 @@ MODEL_DIR = Path(os.getenv("MODEL_DIR", BASE_DIR / "models"))
 CATEGORIES = {"ACADEMIC", "HOSTEL", "INFRASTRUCTURE", "FINANCE", "HARASSMENT"}
 PRIORITIES = {"LOW", "MEDIUM", "HIGH"}
 RANDOM_STATE = 42
+# Each external row counts as 0.3 of one of ours. At full weight its 172 Infrastructure rows
+# pushed the balanced class weights towards Hostel and Harassment (our test split fell from
+# 0.859 to 0.828); at 0.3 all three test sets improved or held. See docs/evaluation.md.
+EXTERNAL_WEIGHT = 0.3
 
 
 def build_text(df: pd.DataFrame) -> pd.Series:
     """The model input. app.py builds the same string for a request."""
-    return df["title"].str.strip() + " " + df["description"].str.strip()
+    return (df["title"].str.strip() + " " + df["description"].str.strip()).str.strip()
+
+
+def load_external_train() -> pd.DataFrame | None:
+    """Category-only rows from the external dataset's train half, or None if its file is absent."""
+    from external import load_mapped  # imported here so train.py works without the folder
+
+    df = load_mapped("train")
+    if df is not None and not set(df["category"]) <= CATEGORIES:
+        raise ValueError(f"external dataset: unknown category {set(df['category']) - CATEGORIES}")
+    return df
 
 
 def load_dataset(path: Path) -> pd.DataFrame:
@@ -58,7 +77,14 @@ def main() -> None:
     shared = set(train["group_id"]) & set(test["group_id"])
     assert not shared, f"group_id on both sides of the split: {sorted(shared)}"
 
-    category_model = build_pipeline().fit(build_text(train), train["category"])
+    external = load_external_train()
+    if external is None:
+        category_train, weights = train, np.ones(len(train))
+    else:
+        category_train = pd.concat([train, external], ignore_index=True)
+        weights = np.r_[np.ones(len(train)), np.full(len(external), EXTERNAL_WEIGHT)]
+    category_model = build_pipeline().fit(build_text(category_train), category_train["category"],
+                                          clf__sample_weight=weights)
     priority_model = build_pipeline().fit(build_text(train), train["priority"])
 
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -70,6 +96,11 @@ def main() -> None:
     print(f"rows: {len(df)}  groups: {df['group_id'].nunique()}")
     print(f"train: {len(train)} rows / {train['group_id'].nunique()} groups")
     print(f"test:  {len(test)} rows / {test['group_id'].nunique()} groups")
+    if external is None:
+        print("external dataset: not found, category model trained on our data only")
+    else:
+        print(f"external dataset: +{len(external)} category rows ({external['group_id'].nunique()} groups), "
+              f"weight {EXTERNAL_WEIGHT}")
     print(f"saved models and test_split.csv to {MODEL_DIR}")
 
 

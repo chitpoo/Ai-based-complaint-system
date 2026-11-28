@@ -27,12 +27,13 @@ Model: for each head, `TfidfVectorizer(ngram_range=(1, 2), max_features=5000, st
 
 | | Category | Priority, model alone | Priority, as served (model + `rules.py`) | MVP bar (test split) |
 |---|---|---|---|---|
-| Grouped test split (99 rows) | **0.8586** | **0.8384** | **0.8283** | category ≥ 0.75, priority ≥ 0.65 |
+| Grouped test split (99 rows) | **0.8788** | **0.8384** | **0.8182** | category ≥ 0.75, priority ≥ 0.65 |
 | Sanity set (50 rows) | **0.9200** | **0.8000** | **0.8000** | none; reported as is |
+| External test: real student complaints (56 rows) | **0.9286** | not scored | not scored | none; see below |
 
 Both bars are met on the test split, by the model alone and as served.
 
-"As served" is what `/predict` returns: the model's priority, then forced to `HIGH` if a critical keyword is present, then raised from `LOW` to `MEDIUM` if the predicted category is HARASSMENT. On the test split the rules changed 1 prediction (a true-LOW harassment query raised to MEDIUM, which counts as an error); on the sanity set they changed none, because every row with a keyword was already predicted HIGH.
+"As served" is what `/predict` returns: the model's priority, then forced to `HIGH` if a critical keyword is present, then raised from `LOW` to `MEDIUM` if the predicted category is HARASSMENT. On the test split the rules changed 2 predictions, both true-LOW harassment requests (a gender sensitisation workshop, an orientation on the code of conduct) raised to MEDIUM, which count as errors. The second one is new: the retrained category model now files it, correctly, under HARASSMENT, and the HARASSMENT minimum then applies. That is the whole of the drop from 0.8283 to 0.8182; on the sanity set they changed none, because every row with a keyword was already predicted HIGH.
 
 **History of these numbers.** Each line is one retraining; the data was changed between them for reasons unrelated to the scores, and nothing was tuned against the sanity set.
 
@@ -40,11 +41,40 @@ Both bars are met on the test split, by the model alone and as served.
 |---|---|---|---|---|
 | 1. First dataset | 0.8788 | 0.8586 | 0.9000 | 0.8400 |
 | 2. After first review: one HARASSMENT group relabelled to a written MEDIUM/HIGH boundary, about 60 descriptions rewritten for varied length and natural wording | 0.8687 | 0.8283 | 0.9000 | 0.8000 |
-| 3. After second review (current): four training descriptions reworded (INF-019, HAR-022), one sanity label corrected | 0.8586 | 0.8384 | 0.9200 | 0.8000 |
+| 3. After second review: four training descriptions reworded (INF-019, HAR-022), one sanity label corrected | 0.8586 | 0.8384 | 0.9200 | 0.8000 |
+| 4. Current: category model also trained on 249 real student complaints, weight 0.3 (see below). Priority model unchanged | 0.8788 | 0.8384 | 0.9200 | 0.8000 |
 
 **One sanity label was corrected after review.** SAN-HAR-10 (sarcastic remarks about a student's religious fasting and festivals) was labelled MEDIUM, but the written boundary in `data/README.md` puts conduct targeting religion in HIGH, and the matching training group is HIGH. It was relabelled HIGH to follow the rule. The model predicts MEDIUM for it, so the correction counts against the model. No other sanity row has ever been changed after scoring.
 
 The headline sanity priority is still 0.8000 because the same retraining flipped one unrelated row, SAN-INF-08 ("Auditorium seats are broken", true MEDIUM), from LOW to the correct MEDIUM on a probability margin of about 0.003. With the label correction alone it would be 0.7800. The sanity category gain (0.9000 to 0.9200, one row, SAN-ACA-05) and both test-split changes (ACA-016 and FIN-019, one row each) are flips of the same size and should be read as noise, not as improvement or regression.
+
+## Real student complaints (external dataset)
+
+The rows above are all synthetic. To get a figure on real text, the category model was also tested, and partly trained, on the [University Students Complaints](https://huggingface.co/datasets/sanchit-19/university-students-complaints) dataset (CC-BY-4.0, Md. Al Amin): 332 complaints written by university students, already split by its author into train and test halves with no complaint group on both sides. `external.py` maps it onto our categories:
+
+| Their category | Ours | Train rows | Test rows |
+|---|---|---|---|
+| Infrastructure, Technical (WiFi, projectors, labs, portals) | INFRASTRUCTURE | 172 | 36 |
+| Academic | ACADEMIC | 48 | 16 |
+| Finance | FINANCE | 29 | 4 |
+| Administrative (discipline, library rules, transport) | left out: no matching department | | |
+
+It has no Hostel or Harassment complaints, so it says nothing about those two classes.
+
+**Severity labels are not used.** They follow a different policy from ours: "Campus WiFi is slow" and "no hand wash in washrooms" are *Urgent*, while "Emergency lights in staircases are not operational" and "duplicate charges appeared in student accounts" are *Low*. Training priority on them would teach the opposite of `data/README.md`, so the priority model still learns from our rows only.
+
+**Weight.** Each external row counts as 0.3 of one of ours. At full weight its 172 Infrastructure rows shifted the balanced class weights, and the model began filing classroom complaints under HOSTEL and harassment under HOSTEL or ACADEMIC:
+
+| External row weight | Our test split | Sanity set | External test | HARASSMENT recall (test) | External rows below the 0.25 floor |
+|---|---|---|---|---|---|
+| 0 (before) | 0.8586 | 0.9200 | 0.8393 | 0.72 | 13 of 56 |
+| 0.3 (chosen) | 0.8788 | 0.9200 | 0.9286 | 0.72 | 0 of 56 |
+| 0.5 | 0.8687 | 0.9200 | 0.9286 | 0.72 | 0 of 56 |
+| 1.0 | 0.8283 | 0.9000 | 0.9107 | 0.72 | 1 of 56 |
+
+The weight was chosen by looking at these three test sets, so the chosen row is slightly optimistic. The gain on our own test split is two rows; treat it as "no worse", not as an improvement. The clear gains are on real text: accuracy rose from 0.8393 to 0.9286, and real complaints the old model was unsure of (13 of 56 would have gone to manual triage) are now classified.
+
+External test errors (4): three paraphrases of one complaint about quiz questions not matching lectures (ACADEMIC, predicted INFRASTRUCTURE) and "Students park vehicles outside designated zones" (INFRASTRUCTURE, predicted HARASSMENT).
 
 ### What the priority numbers do not show
 
@@ -53,10 +83,10 @@ Most HIGH harassment rows contain a critical keyword, and the keyword rule decid
 | | HARASSMENT/HIGH rows | of which contain a critical keyword |
 |---|---|---|
 | Training rows | 60 | 51 |
-| Test split | 12 | 9 |
-| Sanity set | 7 | 3 |
+| Test split | 12 | 10 |
+| Sanity set | 7 | 4 |
 
-So the test split says little about how the model handles serious harassment that is described without one of those words: only 3 such rows are in it. The sanity set, with 4 of 7 keyword-free, is the fairer check, and it is still far too small to rely on.
+The newer keywords (bully, beat up, attack, hit me and others) cover a few more rows. So the test split says little about how the model handles serious harassment that is described without one of those words: only 2 such rows are in it. The sanity set, with 3 of 7 keyword-free, is the fairer check, and it is still far too small to rely on.
 
 ## Per-class results: grouped test split
 
@@ -64,13 +94,13 @@ Category:
 
 | Class | Precision | Recall | F1 | Support |
 |---|---|---|---|---|
-| ACADEMIC | 0.929 | 0.867 | 0.897 | 30 |
+| ACADEMIC | 0.897 | 0.867 | 0.881 | 30 |
 | FINANCE | 0.923 | 1.000 | 0.960 | 12 |
 | HARASSMENT | 0.812 | 0.722 | 0.765 | 18 |
-| HOSTEL | 0.714 | 0.833 | 0.769 | 12 |
-| INFRASTRUCTURE | 0.857 | 0.889 | 0.873 | 27 |
-| macro avg | 0.847 | 0.862 | 0.853 | 99 |
-| weighted avg | 0.861 | 0.859 | 0.858 | 99 |
+| HOSTEL | 0.786 | 0.917 | 0.846 | 12 |
+| INFRASTRUCTURE | 0.926 | 0.926 | 0.926 | 27 |
+| macro avg | 0.869 | 0.886 | 0.876 | 99 |
+| weighted avg | 0.879 | 0.879 | 0.878 | 99 |
 
 Priority (model alone):
 
@@ -118,9 +148,9 @@ Rows are the true class, columns the predicted class.
 |---|---|---|---|---|---|
 | ACADEMIC | 26 | 1 | 3 | 0 | 0 |
 | FINANCE | 0 | 12 | 0 | 0 | 0 |
-| HARASSMENT | 1 | 0 | 13 | 2 | 2 |
-| HOSTEL | 0 | 0 | 0 | 10 | 2 |
-| INFRASTRUCTURE | 1 | 0 | 0 | 2 | 24 |
+| HARASSMENT | 2 | 0 | 13 | 2 | 1 |
+| HOSTEL | 0 | 0 | 0 | 11 | 1 |
+| INFRASTRUCTURE | 1 | 0 | 0 | 1 | 25 |
 
 ![Priority confusion matrix](confusion_priority.png)
 
@@ -132,7 +162,7 @@ Priority, model alone (this is what the image shows):
 | MEDIUM | 1 | 34 | 4 |
 | HIGH | 0 | 5 | 34 |
 
-Priority as served: LOW `14 4 3`, MEDIUM `1 34 4`, HIGH `0 5 34`.
+Priority as served: LOW `13 5 3`, MEDIUM `1 34 4`, HIGH `0 5 34`.
 
 Sanity set, category (same order): ACADEMIC `9 0 1 0 0`, FINANCE `0 10 0 0 0`, HARASSMENT `1 0 8 1 0`, HOSTEL `0 0 0 10 0`, INFRASTRUCTURE `0 0 0 1 9`. Sanity set, priority (model alone and as served are identical): LOW `7 1 5`, MEDIUM `0 17 2`, HIGH `0 2 16`.
 
@@ -142,14 +172,16 @@ Text with no word the model knows (gibberish, Hindi in Devanagari, stop words on
 
 The backend therefore treats a category confidence below `app.ml.min-confidence` (env `ML_MIN_CONFIDENCE`, default 0.25) as no prediction: the grievance is saved as UNCLASSIFIED / MEDIUM / SUBMITTED and goes to the admin queue. A missing confidence is treated the same way. A prediction with `keyword_override=true` is kept whatever its confidence.
 
-The floor also catches real complaints, because confidence is low across the board (median 0.3573 on the test split, 0.3662 on the sanity set):
+The floor also catches real complaints, because confidence is low across the board (median 0.3700 on the test split, 0.3958 on the sanity set, 0.3577 on the external test):
 
 | Floor | Test split: rows sent to manual triage | of those, classified correctly | Category accuracy on rows kept | Sanity set: rows to triage | of those, correct | Accuracy on rows kept |
 |---|---|---|---|---|---|---|
-| 0.25 (backend default) | 6 of 99 | 2 | 0.8925 | 1 of 50 | 0 | 0.9388 |
-| 0.30 | 22 of 99 | 13 | 0.9351 | 11 of 50 | 10 | 0.9231 |
+| 0.25 (backend default) | 5 of 99 | 2 | 0.9043 | 1 of 50 | 0 | 0.9388 |
+| 0.30 | 20 of 99 | 13 | 0.9367 | 9 of 50 | 8 | 0.9268 |
 
-The default is 0.25: it catches the no-known-word cases (0.2144 and 0.2387) and sends about one grievance in twenty to manual triage. At 0.30 roughly one in five would go to triage, and most of those the model had right. The margin is thin: the lowest-confidence real complaint in the test split scores 0.2220, so no floor separates real complaints from unknown text cleanly. The value is a single environment variable.
+On the 56 real external complaints, 0.25 sends none to triage and 0.30 sends 10 (6 of them correct).
+
+The default is 0.25: it catches the no-known-word cases and sends about one grievance in twenty to manual triage. **After retraining with the external rows the margin is thinner:** text with no known word ("hello", gibberish, Hindi, stop words) now scores INFRASTRUCTURE 0.2458, "test" / "test" 0.2356, and the lowest real external complaint 0.2537. The floor still separates them, by less than 0.01. Because the margin is this thin, `app.py` no longer relies on it for text with no known word: when the TF-IDF vector of the text is empty it reports `category_confidence` 0, so such text goes to triage at any floor. Text made of known but meaningless words ("test test") still depends on the floor, so re-check these values after every retraining. At 0.30 roughly one in five would go to triage, and most of those the model had right. The margin is thin: the lowest-confidence real complaint in the test split scores 0.2220, so no floor separates real complaints from unknown text cleanly. The value is a single environment variable.
 
 ## Misclassified examples
 
@@ -163,14 +195,15 @@ From the grouped test split unless marked.
 
 ## Known limitations
 
-- **Small, synthetic, single-style dataset.** 495 rows drafted with AI assistance share one style. Real complaints will be longer, messier, misspelt and often in Hinglish or Hindi; expect accuracy on real traffic to be lower than every number above. The sanity set comes from the same source, so it is a check against memorisation, not a measure of real-world accuracy.
+- **Small, mostly synthetic dataset.** 495 rows drafted with AI assistance share one style. The external test (real student complaints, 0.9286) shows category accuracy holds on real English text for three classes, but it is from one university, short, and has no Hostel or Harassment rows. Hinglish or Hindi complaints remain untested. The sanity set comes from the same source as the training rows, so it is a check against memorisation, not a measure of real-world accuracy.
 - **Bag of words.** TF-IDF has no understanding of negation, severity or context. Place words ("hostel", "lab", "library") dominate, which misroutes harassment that happens in those places.
 - **HIGH can be missed.** 5 of 39 HIGH test rows were predicted MEDIUM (and 2 of 18 in the sanity set). The keyword rule only covers the listed stems and phrases.
 - **LOW is often over-prioritised.** On the sanity set 5 of 13 LOW rows came back HIGH.
 - **Keyword rule matches from the start of a word.** `harass`, `threat`, `abus`, `urgen` and the other stems match any ending ("harassed", "threatens", "abusive", "urgently", "urgency"). It still misses misspellings ("harrasment"), Hindi or Hinglish words, and serious conduct described without any listed word ("he hit me", "he followed me home"). For those the priority falls back to the model.
 - **Keyword rule ignores context, and it has known false positives.** Each of these is forced to HIGH: a procedural question that mentions the "anti-ragging committee"; "this is non-urgent" and "this is not an emergency"; "ragged clothes"; "the stalk of a plant"; "abuse of the wifi"; "killing time in the library". That is deliberate (a false HIGH costs an officer a minute), but expect it in a demo.
-- **Unknown text is not recognised by the ML service itself.** It always returns one of the five categories. The protection is the backend's confidence floor described above, which at its default also sends about one in twenty ordinary complaints to manual triage.
+- **Unknown text is only partly recognised by the ML service.** Text with no word in the vocabulary is reported with confidence 0. Text of known but meaningless words ("test test") still gets a category, and the protection there is the backend's confidence floor described above.
 - **A keyword hit on otherwise unknown text keeps a guessed category.** "help" / "urgent" is served as HARASSMENT 0.2499, HIGH, and the backend routes it to that department because a keyword hit bypasses the floor. The priority is right; the department may not be, and an admin has to reassign it.
+- **Long outage rule.** "no / without water, electricity, power, light(s)" or "<service> not working / cut / outage", together with a number of days or weeks, is served as HIGH. It changes no row in the test or sanity sets; it was added for "no water in hostel for 3 days", which the model served as MEDIUM. It misses outages described without a duration.
 - **HARASSMENT is never served as LOW.** A procedural query that the model files under HARASSMENT is returned as MEDIUM by design.
 - **Confidence is not calibrated.** `category_confidence` is the largest `predict_proba` value. It is below 0.5 for most rows even when the answer is right; show it as a hint only.
 - **Small test side.** 99 test rows (12 in two of the classes) and 50 sanity rows give wide error bars; a difference of a few points between runs of a changed dataset means little.

@@ -11,12 +11,13 @@ import GrievanceDetail from './pages/GrievanceDetail.jsx';
 import Track from './pages/Track.jsx';
 import OfficerQueue from './pages/OfficerQueue.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import Landing from './pages/Landing.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 function Home() {
   const { user, loading } = useAuth();
   if (loading) return <Loading />;
-  return <Navigate to={user ? homeFor(user.role) : '/login'} replace />;
+  return user ? <Navigate to={homeFor(user.role)} replace /> : <Landing />;
 }
 
 export default function App() {

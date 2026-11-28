@@ -2,6 +2,7 @@ package com.grievance.controller;
 
 import com.grievance.dto.AssignRequest;
 import com.grievance.dto.AssignResponse;
+import com.grievance.dto.ReclassifyResponse;
 import com.grievance.dto.GrievanceCreateRequest;
 import com.grievance.dto.GrievanceCreatedResponse;
 import com.grievance.dto.GrievanceDetailResponse;
@@ -85,6 +86,13 @@ public class GrievanceController {
     @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
     public StatusUpdateResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
         return grievanceService.updateStatus(id, request, currentUser.get());
+    }
+
+    /** Admin only: runs the AI again on a grievance saved while the ML service was down. */
+    @PostMapping("/{id}/reclassify")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ReclassifyResponse reclassify(@PathVariable Long id) {
+        return grievanceService.reclassify(id, currentUser.get());
     }
 
     @PutMapping("/{id}/assign")

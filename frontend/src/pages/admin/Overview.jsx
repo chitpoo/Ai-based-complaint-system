@@ -30,12 +30,12 @@ function Breakdown({ title, counts }) {
         <div className="card-body">
           <h2 className="section-title">{title}</h2>
           {Object.entries(counts).map(([key, count]) => (
-            <div key={key} className="mb-2">
+            <div key={key} className="breakdown-row">
               <div className="d-flex justify-content-between small">
                 <span>{key === 'UNCLASSIFIED' ? 'Awaiting review' : titleCase(key)}</span>
                 <span className="fw-semibold">{count}</span>
               </div>
-              <div className="progress" style={{ height: 6 }} aria-hidden="true">
+              <div className="progress" style={{ height: 8 }} aria-hidden="true">
                 <div className="progress-bar" style={{ width: `${(count / max) * 100}%` }} />
               </div>
             </div>

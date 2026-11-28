@@ -68,6 +68,11 @@ def predict_with_confidence(model, text: str) -> tuple[str, float]:
     return str(model.classes_[best]), round(float(probabilities[best]), 4)
 
 
+def knows_any_word(model, text: str) -> bool:
+    """False when no word of the text is in the model's vocabulary ("hello", "asdf qwer")."""
+    return model.named_steps["tfidf"].transform([text]).nnz > 0
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -78,6 +83,10 @@ def predict(body: PredictRequest, request: Request) -> PredictResponse:
     text = f"{body.title} {body.description}"  # same input string as train.build_text
     category, category_confidence = predict_with_confidence(request.app.state.category_model, text)
     priority, priority_confidence = predict_with_confidence(request.app.state.priority_model, text)
+    if not knows_any_word(request.app.state.category_model, text):
+        # The model would still name a class, at about 0.25. Report zero so the backend's
+        # confidence floor always sends such text to manual triage, whatever the floor is.
+        category_confidence = 0.0
 
     priority, keyword_override, keyword = apply_rules(text, category, priority)
     if keyword_override:

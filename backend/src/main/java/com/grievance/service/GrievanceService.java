@@ -21,6 +21,8 @@ import com.grievance.enums.Role;
 import com.grievance.exception.BadRequestException;
 import com.grievance.exception.ForbiddenOperationException;
 import com.grievance.exception.ResourceNotFoundException;
+import com.grievance.dto.ReclassifyResponse;
+import com.grievance.exception.ServiceUnavailableException;
 import com.grievance.ml.MlClient;
 import com.grievance.ml.MlPrediction;
 import com.grievance.repository.DepartmentRepository;
@@ -251,6 +253,58 @@ public class GrievanceService {
         }
         return new AssignResponse(g.getId(), officer == null ? null : officer.getId(), department.getId(),
                 g.getStatus());
+    }
+
+    /**
+     * Asks the AI again about a grievance that was saved without a category, usually because the
+     * ML service was down at submission. Like submit, the ML call runs outside the transaction.
+     */
+    public ReclassifyResponse reclassify(Long id, User admin) {
+        Grievance before = load(id);
+        requireReclassifiable(before);
+        if (!mlClient.isAvailable()) {
+            throw new ServiceUnavailableException("The AI service is not running; start it and try again");
+        }
+        MlPrediction prediction = mlClient.predict(before.getTitle(), before.getDescription())
+                .orElseThrow(() -> new BadRequestException(
+                        "The AI is not confident about this grievance; assign it by hand"));
+        return transactionTemplate.execute(tx -> applyPrediction(id, prediction, admin));
+    }
+
+    private ReclassifyResponse applyPrediction(Long id, MlPrediction prediction, User admin) {
+        Grievance g = load(id);
+        requireReclassifiable(g); // re-checked: an admin may have assigned it during the ML call
+        Department department = departmentRepository.findByCategory(prediction.category())
+                .orElseThrow(() -> new BadRequestException("No department handles "
+                        + prediction.category() + " yet; create one or assign by hand"));
+
+        g.setCategory(prediction.category());
+        g.setPriority(prediction.priority());
+        g.setAiConfidence(prediction.categoryConfidence() == null ? null
+                : BigDecimal.valueOf(Math.max(0, Math.min(1, prediction.categoryConfidence())))
+                        .setScale(4, RoundingMode.HALF_UP));
+        g.setDepartment(department);
+
+        String remark = "Classified by AI on admin request; routed to " + department.getName();
+        User adminRef = userRepository.getReferenceById(admin.getId());
+        if (g.getStatus() == GrievanceStatus.SUBMITTED) {
+            transitionPolicy.requireAllowed(GrievanceStatus.SUBMITTED, GrievanceStatus.ASSIGNED);
+            applyStatus(g, GrievanceStatus.ASSIGNED, adminRef, remark);
+        } else {
+            addHistory(g, g.getStatus(), g.getStatus(), adminRef, remark);
+        }
+        return new ReclassifyResponse(g.getId(), g.getCategory(), g.getPriority(), g.getStatus(),
+                department.getName());
+    }
+
+    private void requireReclassifiable(Grievance g) {
+        if (g.getCategory() != Category.UNCLASSIFIED || g.getDepartment() != null) {
+            throw new BadRequestException("Only grievances still awaiting review can be sent to the AI again");
+        }
+        // ESCALATED counts as open here: a grievance nobody routed is exactly the one that escalates.
+        if (g.getStatus() == GrievanceStatus.RESOLVED || g.getStatus() == GrievanceStatus.CLOSED) {
+            throw new BadRequestException("A " + g.getStatus() + " grievance cannot be reclassified");
+        }
     }
 
     /**

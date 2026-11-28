@@ -67,4 +67,16 @@ public interface GrievanceRepository extends JpaRepository<Grievance, Long>, Jpa
     @Query(value = "select avg(timestampdiff(second, created_at, resolved_at)) / 3600 "
             + "from grievances where resolved_at is not null", nativeQuery = true)
     Double averageResolutionHours();
+
+    // --- Site-wide daily counts for the public dashboard (numbers only) ---
+
+    @Query(value = "select date(created_at), count(*) from grievances where created_at >= :since "
+            + "group by date(created_at)", nativeQuery = true)
+    List<Object[]> countFiledPerDaySince(@Param("since") LocalDateTime since);
+
+    @Query(value = "select date(resolved_at), count(*) from grievances where resolved_at >= :since "
+            + "group by date(resolved_at)", nativeQuery = true)
+    List<Object[]> countResolvedPerDaySince(@Param("since") LocalDateTime since);
+
+    long countByEscalatedTrue();
 }

@@ -132,7 +132,9 @@ Public registration always creates a normal user, whatever the request says. Off
 | Features | TF-IDF over title + description, unigrams and bigrams |
 | Models | Two Logistic Regression classifiers with balanced class weights: category (5 classes) and priority (3 levels) |
 | Keyword rules | Applied after the model. Words such as *ragging, harass…, bully…, threat…, assault…, attack…, beat up, hit me, fight…, injur…, knife, unsafe, suicid…, urgent, bribe…, stalk…* force **High** priority. Matching is by word stem, so "threatens" and "harassed" count |
+| Long outages | Water, electricity or lights missing for days or weeks ("no water in hostel for 3 days") is raised to **High** |
 | Safety floor | A grievance classified as Harassment is never given Low priority |
+| Unknown text | If no word of the text is in the model's vocabulary ("hello", gibberish), the service reports confidence 0, so the backend always sends it to manual triage |
 | Split | 80/20, grouped by source complaint, so paraphrases of one complaint never appear on both sides |
 
 ### Dataset
@@ -141,12 +143,17 @@ Public registration always creates a normal user, whatever the request says. Off
 
 **The dataset was drafted with AI assistance, not collected from real complaints.** It should be read through and corrected by hand before the numbers below are relied on.
 
+The category model also learns from real text: the training half of the [University Students Complaints](https://huggingface.co/datasets/sanchit-19/university-students-complaints) dataset (332 complaints by university students, CC-BY-4.0, Md. Al Amin), mapped onto Academic, Infrastructure and Finance. Its rows count at 0.3 weight so they do not swamp the two classes it lacks (Hostel, Harassment). Its severity labels follow a different policy from ours and are not used.
+
 ### Results
 
 | | Category accuracy | Priority (model alone) | Priority (as served, with rules) |
 |---|---|---|---|
-| Grouped test split (99 rows) | 0.8586 | 0.8384 | 0.8283 |
+| Grouped test split (99 rows) | 0.8788 | 0.8384 | 0.8182 |
 | Sanity set (50 rows) | 0.9200 | 0.8000 | 0.8000 |
+| Real student complaints, external test half (56 rows) | 0.9286 | — | — |
+
+Adding the real complaints raised category accuracy on real text from 0.84 to 0.93, and none of them now fall below the confidence floor (13 of 56 did before).
 
 Per-class precision and recall, the confusion matrices and a discussion of the mistakes are in [`ml-service/docs/evaluation.md`](ml-service/docs/evaluation.md).
 
@@ -157,7 +164,7 @@ Submission never depends on the AI. The grievance is saved as *Unclassified*, wi
 - the ML service is down or does not answer within 5 seconds
 - the model's category confidence is below a floor (`ML_MIN_CONFIDENCE`, default 0.25) and no critical keyword matched
 
-This stops meaningless text such as "test" from being routed to a real department. At the default floor about one grievance in twenty goes to manual triage. When the admin assigns an unclassified grievance, it takes the category of the department chosen.
+This stops meaningless text such as "test" from being routed to a real department. At the default floor about one grievance in twenty goes to manual triage. When the admin assigns an unclassified grievance, it takes the category of the department chosen. If it was left unclassified because the AI was down, the admin can instead press **Run AI classification again** on the grievance page once the service is back (`POST /grievances/{id}/reclassify`).
 
 ---
 
@@ -198,6 +205,8 @@ Base path: `/api`. All bodies are JSON. Errors use one shape: `{ timestamp, stat
 | PUT | `/grievances/{id}/status` | Officer, admin | Change status. Body: `status`, optional `remark` |
 | GET | `/grievances` | Admin | All grievances, paged. Filters: `status`, `category`, `priority`, `overdue`, `page`, `size` |
 | PUT | `/grievances/{id}/assign` | Admin | Assign or reassign. Body: `departmentId` and/or `officerId` |
+| POST | `/grievances/{id}/reclassify` | Admin | Ask the AI again about an unclassified, unrouted grievance. `503` if the ML service is down, `400` if it is still not confident |
+| GET | `/stats/public` | Any signed-in user | Site-wide counts only (by status, escalated, filed and resolved per day for 14 days); no titles or names |
 
 ### Departments and admin
 
@@ -458,7 +467,7 @@ Not deployed yet. The intended free-tier setup:
 
 ## Known Limitations
 
-- **Synthetic data.** The training and sanity sets were drafted with AI assistance and come from the same source, so the accuracy figures are optimistic. The sets are small: one row moves a score by one to two points.
+- **Mostly synthetic data.** Our training and sanity sets were drafted with AI assistance and come from the same source, so those figures are optimistic. The real-complaint test covers only Academic, Infrastructure and Finance; Hostel and Harassment have been tested on synthetic text only. The sets are small: one row moves a score by one to two points.
 - **Keyword rules ignore context.** A question about the "anti-ragging committee" or the phrase "non-urgent" is still forced to High priority.
 - **Anonymous mode hides the name only.** Admins can see the submitter, and nothing stops a user from identifying themselves in the text.
 - **English only.** The model was trained on English text.

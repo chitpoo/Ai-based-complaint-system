@@ -198,6 +198,8 @@ a:hover {
 /* -------------------------------------------------------------------- cards */
 
 .card {
+  /* Bootstrap paints cards with --bs-body-bg, which is the grey canvas here: force white. */
+  --bs-card-bg: var(--surface);
   --bs-card-border-color: var(--line);
   --bs-card-border-radius: 0.85rem;
   --bs-card-inner-border-radius: 0.85rem;
@@ -553,4 +555,171 @@ a:hover {
   * {
     transition: none !important;
   }
+}
+
+/* ------------------------------------------------------------ polish pass */
+
+/* Inputs and tables also default to the canvas grey; give them the white surface. */
+.form-control,
+.form-select {
+  background-color: var(--surface);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #a5b4fc;
+}
+
+.table {
+  --bs-table-bg: var(--surface);
+}
+
+.table > tbody > tr {
+  transition: background-color 0.12s;
+}
+
+.table-hover > tbody > tr:hover > * {
+  --bs-table-bg-state: #f8f9ff;
+}
+
+h1, .h1, h2, .h2, .h3, .h4 {
+  letter-spacing: -0.015em;
+}
+
+.page-header h1 {
+  font-weight: 700;
+}
+
+/* Admin breakdown rows: room between the label and its bar, and between rows. */
+.breakdown-row + .breakdown-row {
+  margin-top: 0.85rem;
+}
+
+.breakdown-row .progress {
+  margin-top: 0.35rem;
+  border-radius: 999px;
+}
+
+.breakdown-row .progress-bar {
+  border-radius: 999px;
+}
+
+.stat-card .hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.tone-blue { --tone-fg: #1d4ed8; --tone-bg: #dbeafe; }
+
+/* Segmented switch (Mine / Everyone). */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 0.6rem;
+  background: #eceef5;
+}
+
+.segmented button {
+  border: 0;
+  background: transparent;
+  color: #475569;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.3rem 0.9rem;
+  border-radius: 0.45rem;
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.nav-login {
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------- landing */
+
+.hero {
+  position: relative;
+  margin-top: 1.5rem;
+  padding: 4rem 3rem;
+  border-radius: 1.25rem;
+  color: #fff;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.18), transparent 40%),
+    linear-gradient(135deg, #4f46e5 0%, #4338ca 55%, #3730a3 100%);
+  overflow: hidden;
+}
+
+.hero h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  max-width: 16ch;
+}
+
+.hero p.lead {
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 48ch;
+}
+
+.hero .btn-light {
+  color: var(--brand-dark);
+  font-weight: 600;
+}
+
+.hero .btn-outline-light:hover {
+  color: var(--brand-dark);
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.feature-card .icon {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.7rem;
+  color: var(--brand);
+  background: var(--brand-soft);
+  margin-bottom: 0.9rem;
+}
+
+.step-num {
+  display: inline-grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--brand);
+  flex: none;
+}
+
+@media (max-width: 575px) {
+  .hero {
+    padding: 2.5rem 1.5rem;
+  }
+}
+
+.app-nav .nav-login {
+  color: #475569;
+  text-decoration: none;
+}
+
+.app-nav .nav-login:hover {
+  color: var(--ink);
 }

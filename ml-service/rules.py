@@ -37,6 +37,25 @@ _CRITICAL_PATTERN = re.compile(
 )
 
 
+# A basic service (water, power) gone for days is HIGH even without a critical word: the model
+# reads "no water in hostel for 3 days" as an ordinary MEDIUM complaint.
+_SERVICE = r"(?:water|electricity|power|current|light|lights)"
+_OUTAGE_PATTERN = re.compile(
+    r"\b(?:no|without|not\s+getting|no\s+supply\s+of)\s+(?:\w+\s+){0,2}" + _SERVICE + r"\b"
+    r"|\b" + _SERVICE + r"\s+(?:\w+\s+){0,3}(?:not\s+(?:working|available|coming)|cut|outage|shortage|gone)\b",
+    re.IGNORECASE,
+)
+_DAYS_PATTERN = re.compile(
+    r"\b(?:\d+|two|three|four|five|six|seven|several|many|few)\s+(?:days|weeks)\b|\b(?:a|one)\s+week\b",
+    re.IGNORECASE,
+)
+
+
+def is_prolonged_outage(text: str) -> bool:
+    """True when the text names a missing basic service and a duration of days or weeks."""
+    return bool(_OUTAGE_PATTERN.search(text) and _DAYS_PATTERN.search(text))
+
+
 def find_critical_keyword(text: str) -> str | None:
     """Return the first critical word or phrase in the text, lower-cased, or None."""
     match = _CRITICAL_PATTERN.search(text)
@@ -52,6 +71,8 @@ def apply_rules(text: str, category: str, priority: str) -> tuple[str, bool, str
     keyword = find_critical_keyword(text)
     if keyword is not None:
         return "HIGH", True, keyword
+    if is_prolonged_outage(text):
+        return "HIGH", False, None
     if category == "HARASSMENT" and priority == "LOW":
         return "MEDIUM", False, None
     return priority, False, None

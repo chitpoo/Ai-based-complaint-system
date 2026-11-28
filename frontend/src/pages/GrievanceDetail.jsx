@@ -63,6 +63,41 @@ function StatusForm({ grievance, role, onUpdated }) {
   );
 }
 
+/** Shown to admins for grievances saved while the AI was down, so they need not be routed by hand. */
+function ReclassifyPanel({ grievance, onUpdated }) {
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const run = async () => {
+    setError('');
+    setBusy(true);
+    try {
+      await client.post(`/grievances/${grievance.id}/reclassify`);
+      await onUpdated();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card mb-4">
+      <div className="card-body p-4">
+        <h2 className="section-title">Awaiting review</h2>
+        <p className="text-muted small">
+          The AI did not classify this grievance, usually because it was not running at submission.
+          You can ask it again, or route the grievance by hand from the All grievances tab.
+        </p>
+        <ErrorAlert message={error} />
+        <button type="button" className="btn btn-outline-primary" disabled={busy} onClick={run}>
+          {busy ? 'Asking the AI…' : 'Run AI classification again'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function GrievanceDetail() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -84,6 +119,8 @@ export default function GrievanceDetail() {
   }, [load]);
 
   const canUpdate = user.role === 'OFFICER' || user.role === 'ADMIN';
+  const canReclassify = (g) => user.role === 'ADMIN' && g.category === 'UNCLASSIFIED' && !g.departmentName
+    && !['RESOLVED', 'CLOSED'].includes(g.status);
   const back = (
     <Link className="d-inline-flex align-items-center gap-1" to={homeFor(user.role)}>
       <Icon name="arrowLeft" size={16} /> Back to list
@@ -167,6 +204,7 @@ export default function GrievanceDetail() {
           </div>
         </div>
         <div className="col-lg-5">
+          {canReclassify(grievance) && <ReclassifyPanel grievance={grievance} onUpdated={load} />}
           {canUpdate && (
             <div className="card mb-4">
               <div className="card-body p-4">

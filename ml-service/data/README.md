@@ -74,3 +74,9 @@ The label follows the kind of conduct, not whether a keyword happens to be in th
 - Rewordings must be real rewrites (different sentence structure and details), not the same sentence with one word swapped.
 - Do not copy from `sanity.csv` and do not edit `sanity.csv` to make the numbers look better.
 - Retrain and re-evaluate afterwards, and update `docs/evaluation.md` with the new output.
+
+## External dataset (`external/`)
+
+`external/university_complaints_{train,test}.csv` are the train and test files of the [University Students Complaints](https://huggingface.co/datasets/sanchit-19/university-students-complaints) dataset, downloaded unchanged. They are real complaints written by university students, published under CC-BY-4.0 by Md. Al Amin; keep this credit if you redistribute them.
+
+`../external.py` maps them to our categories (Infrastructure and Technical to INFRASTRUCTURE, Academic to ACADEMIC, Finance to FINANCE; Administrative is left out). Only the text and the category are used: the dataset's severity labels follow a different policy from the priority guide above, so they are ignored. The train half adds category rows to training; the test half is only ever scored. Results: `../docs/evaluation.md`.

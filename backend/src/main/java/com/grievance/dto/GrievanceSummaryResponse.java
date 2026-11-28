@@ -11,13 +11,13 @@ import java.time.LocalDateTime;
 public record GrievanceSummaryResponse(Long id, String trackingId, String title, Category category,
                                        Priority priority, GrievanceStatus status, Long departmentId,
                                        String departmentName, boolean escalated, boolean anonymous,
-                                       LocalDateTime createdAt) {
+                                       LocalDateTime createdAt, LocalDateTime resolvedAt) {
 
     public static GrievanceSummaryResponse from(Grievance g) {
         return new GrievanceSummaryResponse(g.getId(), g.getTrackingId(), g.getTitle(), g.getCategory(),
                 g.getPriority(), g.getStatus(),
                 g.getDepartment() == null ? null : g.getDepartment().getId(),
                 g.getDepartment() == null ? null : g.getDepartment().getName(),
-                g.isEscalated(), g.isAnonymous(), g.getCreatedAt());
+                g.isEscalated(), g.isAnonymous(), g.getCreatedAt(), g.getResolvedAt());
     }
 }
